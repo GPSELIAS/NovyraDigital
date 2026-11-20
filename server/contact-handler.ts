@@ -8,7 +8,7 @@ import {
   serviceLabel,
   type ContactPayload,
   type ContactResponse,
-} from '../../shared/contact'
+} from '../shared/contact'
 
 export interface ContactEnv {
   RESEND_API_KEY?: string
