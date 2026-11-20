@@ -1,0 +1,19 @@
+# Cloudflare Pages – Projektkonfiguration
+# Doku: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+name = "novyra-digital"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-05-01"
+
+# Nicht-geheime Variablen. Geheimnisse (RESEND_API_KEY, TURNSTILE_SECRET_KEY)
+# werden im Cloudflare-Dashboard als "Secret" hinterlegt – niemals hier.
+[vars]
+MAIL_TO = "info@novyradigital.ch"
+MAIL_FROM = "Novyra Digital <website@mail.novyradigital.ch>"
+SEND_CONFIRMATION_EMAIL = "false"
+ALLOWED_ORIGINS = "https://novyradigital.ch,https://www.novyradigital.ch"
+
+# Optional: einfaches Rate-Limiting über Workers KV.
+# 1) KV-Namespace im Dashboard anlegen, 2) die folgenden Zeilen aktivieren und ID eintragen.
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "<KV_NAMESPACE_ID>"

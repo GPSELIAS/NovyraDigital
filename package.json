@@ -1,0 +1,41 @@
+{
+  "name": "novyra-digital",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Website von Novyra Digital – Digitalagentur aus der Schweiz",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:full": "npm run build && wrangler pages dev dist --port 8788",
+    "build": "tsc -b && vite build && node scripts/prerender.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc -b && tsc -p functions/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "lucide-react": "^1.77.0",
+    "motion": "^14.14.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.6",
+    "vitest": "^3.2.7",
+    "wrangler": "^4.86.0"
+  }
+}
