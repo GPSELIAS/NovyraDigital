@@ -1,7 +1,6 @@
 /**
- * POST /api/contact
- * Cloudflare Pages Function: validiert Anfragen, prüft Spam-Schutz (Turnstile + Honeypot
- * + optionales Rate-Limiting) und versendet die Nachricht via Resend.
+ * Plattformneutraler Handler für POST /api/contact: validiert Anfragen, prüft Spam-Schutz
+ * (Turnstile + Honeypot) und versendet die Nachricht via Resend. Wird von der Netlify Function aufgerufen.
  */
 import {
   normalizePayload,
@@ -11,20 +10,16 @@ import {
   type ContactResponse,
 } from '../../shared/contact'
 
-export interface Env {
+export interface ContactEnv {
   RESEND_API_KEY?: string
   TURNSTILE_SECRET_KEY?: string
   MAIL_TO?: string
   MAIL_FROM?: string
   SEND_CONFIRMATION_EMAIL?: string
   ALLOWED_ORIGINS?: string
-  /** Optionaler KV-Namespace für Rate-Limiting */
-  RATE_LIMIT?: KVNamespace
 }
 
 const MAX_BODY_BYTES = 20_000
-const RATE_LIMIT_MAX = 5 // Anfragen …
-const RATE_LIMIT_WINDOW_S = 600 // … pro 10 Minuten und IP
 
 const json = (body: ContactResponse, status = 200, extra: HeadersInit = {}) =>
   new Response(JSON.stringify(body), {
@@ -39,7 +34,7 @@ const json = (body: ContactResponse, status = 200, extra: HeadersInit = {}) =>
 
 const GENERIC_ERROR = 'Deine Anfrage konnte leider nicht gesendet werden. Bitte versuche es später erneut oder schreibe uns direkt an info@novyradigital.ch.'
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export async function handleContact(request: Request, env: ContactEnv, ip = ''): Promise<Response> {
   try {
     // 1) Herkunft prüfen (Schutz vor Cross-Site-Missbrauch)
     if (!isAllowedOrigin(request, env)) {
@@ -78,20 +73,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (!env.RESEND_API_KEY || !env.TURNSTILE_SECRET_KEY || !env.MAIL_FROM || !env.MAIL_TO) {
       console.error('[contact] Fehlende Konfiguration: RESEND_API_KEY, TURNSTILE_SECRET_KEY, MAIL_FROM oder MAIL_TO')
       return json({ ok: false, error: GENERIC_ERROR }, 503)
-    }
-
-    const ip = request.headers.get('CF-Connecting-IP') ?? ''
-
-    // 6) Rate-Limiting (nur aktiv, wenn KV gebunden ist)
-    if (env.RATE_LIMIT && ip) {
-      const limited = await isRateLimited(env.RATE_LIMIT, ip)
-      if (limited) {
-        return json(
-          { ok: false, error: 'Zu viele Anfragen in kurzer Zeit. Bitte versuche es in einigen Minuten erneut.' },
-          429,
-          { 'Retry-After': String(RATE_LIMIT_WINDOW_S) },
-        )
-      }
     }
 
     // 7) Turnstile prüfen
@@ -138,26 +119,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
-export const onRequest: PagesFunction<Env> = async () =>
-  new Response('Method Not Allowed', { status: 405, headers: { Allow: 'POST' } })
-
 /* ───────────────────────── Hilfsfunktionen ───────────────────────── */
 
-function isAllowedOrigin(request: Request, env: Env): boolean {
+function isAllowedOrigin(request: Request, env: ContactEnv): boolean {
   const origin = request.headers.get('Origin')
   if (!origin) return false
   const self = new URL(request.url).origin
-  if (origin === self) return true // gleiche Herkunft (inkl. *.pages.dev-Previews)
+  if (origin === self) return true // gleiche Herkunft (inkl. Netlify-Deploy-Previews)
   const allowed = (env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   return allowed.includes(origin)
-}
-
-async function isRateLimited(kv: KVNamespace, ip: string): Promise<boolean> {
-  const key = `rl:${await sha256(ip)}`
-  const current = Number((await kv.get(key)) ?? '0')
-  if (current >= RATE_LIMIT_MAX) return true
-  await kv.put(key, String(current + 1), { expirationTtl: RATE_LIMIT_WINDOW_S })
-  return false
 }
 
 async function verifyTurnstile(secret: string, token: string, ip: string): Promise<boolean> {
