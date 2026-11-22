@@ -157,7 +157,7 @@ async function verifyTurnstile(secret: string, token: string, hostname: string, 
     // Cloudflare liefert auch bei HTTP 4xx einen JSON-Body mit «error-codes» – diesen immer auswerten.
     let out: { success?: boolean; hostname?: string; action?: string; 'error-codes'?: string[] }
     try {
-      out = await res.json()
+      out = (await res.json()) as typeof out
     } catch {
       console.error(`[contact] Turnstile-Antwort HTTP ${res.status} ohne JSON`)
       return { result: 'failed', reason: `http-${res.status}` }
