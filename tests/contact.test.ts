@@ -76,10 +76,10 @@ function call(body: unknown, opts: Parameters<typeof makeRequest>[1] & { env?: C
 type FetchCall = [string, RequestInit]
 let fetchMock: ReturnType<typeof vi.fn>
 
-function mockServices({ turnstile = true, resend = 200, hostname = 'novyradigital.ch', action = 'contact', confirmation = 200, errorCodes = [] as string[] } = {}) {
+function mockServices({ turnstile = true, resend = 200, hostname = 'novyradigital.ch', action = 'contact', confirmation = 200, errorCodes = [] as string[], turnstileStatus = 200 } = {}) {
   let mailCount = 0
   fetchMock = vi.fn(async (url: string) => {
-    if (url.includes('turnstile')) return Response.json({ success: turnstile, hostname, action, 'error-codes': errorCodes })
+    if (url.includes('turnstile')) return Response.json({ success: turnstile, hostname, action, 'error-codes': errorCodes }, { status: turnstileStatus })
     if (url.includes('resend')) {
       const status = mailCount++ === 0 ? resend : confirmation
       return Response.json(status === 200 ? { id: 'abc' } : { message: 'fail' }, { status })
@@ -136,6 +136,18 @@ describe('POST /api/contact', () => {
     expect(res.status).toBe(503)
     expect(((await res.json()) as any).ok).toBe(false)
     expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)
+  })
+
+  it('wertet Fehlercodes auch bei HTTP 400 von Cloudflare aus', async () => {
+    mockServices({ turnstile: false, errorCodes: ['invalid-input-secret'], turnstileStatus: 400 })
+    const secretRes = await call(valid)
+    expect(secretRes.status).toBe(503)
+    expect(((await secretRes.json()) as any).code).toBe('TS-invalid-input-secret')
+
+    mockServices({ turnstile: false, errorCodes: ['invalid-input-response'], turnstileStatus: 400 })
+    const tokenRes = await call(valid)
+    expect(tokenRes.status).toBe(400)
+    expect(((await tokenRes.json()) as any).code).toBe('TS-invalid-input-response')
   })
 
   it('lehnt abweichenden Hostname ab und nennt den Grund im Diagnosecode', async () => {

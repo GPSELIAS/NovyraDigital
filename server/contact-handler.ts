@@ -154,11 +154,14 @@ async function verifyTurnstile(secret: string, token: string, hostname: string, 
       body,
       signal: AbortSignal.timeout(5_000),
     })
-    if (!res.ok) {
-      console.error(`[contact] Turnstile-Antwort HTTP ${res.status}`)
+    // Cloudflare liefert auch bei HTTP 4xx einen JSON-Body mit «error-codes» – diesen immer auswerten.
+    let out: { success?: boolean; hostname?: string; action?: string; 'error-codes'?: string[] }
+    try {
+      out = await res.json()
+    } catch {
+      console.error(`[contact] Turnstile-Antwort HTTP ${res.status} ohne JSON`)
       return { result: 'failed', reason: `http-${res.status}` }
     }
-    const out = (await res.json()) as { success?: boolean; hostname?: string; action?: string; 'error-codes'?: string[] }
     const codes = (out['error-codes'] ?? []).map((c) => safe(c))
     if (codes.some((c) => TURNSTILE_CONFIG_ERRORS.includes(c))) {
       console.error(`[contact] Turnstile-Konfigurationsfehler: ${codes.join(', ')} – TURNSTILE_SECRET_KEY prüfen (gehört er zum selben Widget wie der Site Key?)`)
