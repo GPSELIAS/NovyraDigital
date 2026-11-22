@@ -76,10 +76,10 @@ function call(body: unknown, opts: Parameters<typeof makeRequest>[1] & { env?: C
 type FetchCall = [string, RequestInit]
 let fetchMock: ReturnType<typeof vi.fn>
 
-function mockServices({ turnstile = true, resend = 200, hostname = 'novyradigital.ch', action = 'contact', confirmation = 200 } = {}) {
+function mockServices({ turnstile = true, resend = 200, hostname = 'novyradigital.ch', action = 'contact', confirmation = 200, errorCodes = [] as string[] } = {}) {
   let mailCount = 0
   fetchMock = vi.fn(async (url: string) => {
-    if (url.includes('turnstile')) return Response.json({ success: turnstile, hostname, action })
+    if (url.includes('turnstile')) return Response.json({ success: turnstile, hostname, action, 'error-codes': errorCodes })
     if (url.includes('resend')) {
       const status = mailCount++ === 0 ? resend : confirmation
       return Response.json(status === 200 ? { id: 'abc' } : { message: 'fail' }, { status })
@@ -125,6 +125,21 @@ describe('POST /api/contact', () => {
 
   it('lehnt fehlgeschlagene Turnstile-Prüfung ab, ohne zu senden', async () => {
     mockServices({ turnstile: false })
+    const res = await call(valid)
+    expect(res.status).toBe(400)
+    expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)
+  })
+
+  it('meldet falschen Turnstile-Secret als Konfigurationsfehler (503), ohne zu senden', async () => {
+    mockServices({ turnstile: false, errorCodes: ['invalid-input-secret'] })
+    const res = await call(valid)
+    expect(res.status).toBe(503)
+    expect(((await res.json()) as any).ok).toBe(false)
+    expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)
+  })
+
+  it('lehnt abweichenden Hostname ab', async () => {
+    mockServices({ hostname: 'fremde-seite.example' })
     const res = await call(valid)
     expect(res.status).toBe(400)
     expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)

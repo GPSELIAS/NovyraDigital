@@ -84,8 +84,11 @@ export async function handleContact(request: Request, env: ContactEnv): Promise<
     if (!data.turnstileToken || data.turnstileToken.length > 2048) {
       return json({ ok: false, error: 'Die Sicherheitsprüfung fehlt. Bitte führe die Prüfung erneut durch.' }, 400)
     }
-    const human = await verifyTurnstile(secret, data.turnstileToken, hostname, testSecret)
-    if (!human) {
+    const check = await verifyTurnstile(secret, data.turnstileToken, hostname, testSecret)
+    if (check === 'config-error') {
+      return json({ ok: false, error: 'Das Kontaktformular ist vorübergehend nicht verfügbar.' }, 503)
+    }
+    if (check !== 'ok') {
       return json({ ok: false, error: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.' }, 400)
     }
 
@@ -131,7 +134,12 @@ function isAllowedOrigin(request: Request, env: ContactEnv, origin: string): boo
   return allowed.includes(origin)
 }
 
-async function verifyTurnstile(secret: string, token: string, hostname: string, localTest: boolean): Promise<boolean> {
+/** Cloudflare-Fehlercodes, die auf eine falsche Server-Konfiguration hinweisen (nicht auf einen Bot). */
+const TURNSTILE_CONFIG_ERRORS = ['missing-input-secret', 'invalid-input-secret']
+
+type TurnstileResult = 'ok' | 'failed' | 'config-error'
+
+async function verifyTurnstile(secret: string, token: string, hostname: string, localTest: boolean): Promise<TurnstileResult> {
   const body = new URLSearchParams({ secret, response: token })
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -139,14 +147,33 @@ async function verifyTurnstile(secret: string, token: string, hostname: string, 
       body,
       signal: AbortSignal.timeout(5_000),
     })
-    if (!res.ok) return false
-    const out = (await res.json()) as { success?: boolean; hostname?: string; action?: string }
-    return out.success === true && (localTest
-      ? out.hostname === 'example.com'
-      : out.hostname === hostname && out.action === CONTACT_TURNSTILE_ACTION)
-  } catch {
-    console.error('[contact] Turnstile-Prüfung fehlgeschlagen')
-    return false
+    if (!res.ok) {
+      console.error(`[contact] Turnstile-Antwort HTTP ${res.status}`)
+      return 'failed'
+    }
+    const out = (await res.json()) as { success?: boolean; hostname?: string; action?: string; 'error-codes'?: string[] }
+    const codes = out['error-codes'] ?? []
+    if (codes.some((c) => TURNSTILE_CONFIG_ERRORS.includes(c))) {
+      console.error(`[contact] Turnstile-Konfigurationsfehler: ${codes.join(', ')} – TURNSTILE_SECRET_KEY prüfen (gehört er zum selben Widget wie der Site Key?)`)
+      return 'config-error'
+    }
+    if (out.success !== true) {
+      console.error(`[contact] Turnstile abgelehnt: ${codes.join(', ') || 'ohne Fehlercode'}`)
+      return 'failed'
+    }
+    const expectedHost = localTest ? 'example.com' : hostname
+    if (out.hostname !== expectedHost) {
+      console.error(`[contact] Turnstile-Hostname passt nicht: erwartet «${expectedHost}», erhalten «${out.hostname ?? '–'}»`)
+      return 'failed'
+    }
+    if (!localTest && out.action !== CONTACT_TURNSTILE_ACTION) {
+      console.error(`[contact] Turnstile-Action passt nicht: erwartet «${CONTACT_TURNSTILE_ACTION}», erhalten «${out.action ?? '–'}»`)
+      return 'failed'
+    }
+    return 'ok'
+  } catch (err) {
+    console.error('[contact] Turnstile-Prüfung fehlgeschlagen', err instanceof Error ? err.message : err)
+    return 'failed'
   }
 }
 
