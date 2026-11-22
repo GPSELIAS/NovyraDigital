@@ -5,18 +5,18 @@ import { useSeo } from '../lib/seo'
 
 export default function Impressum() {
   useSeo({
-    title: 'Impressum – Novyra Digital',
-    description: 'Impressum und Anbieterkennzeichnung von Novyra Digital, Digitalagentur aus der Schweiz.',
+    title: `Impressum – ${site.name}`,
+    description: `Impressum und Anbieterkennzeichnung von ${site.name}, Digitalagentur aus der Schweiz.`,
     path: '/impressum',
   })
   const l = site.legal
   return (
     <LegalLayout eyebrow="Rechtliches" title="Impressum">
-      <h2>Verantwortlich für den Inhalt</h2>
+      <h2>Anbieter</h2>
       <p>
         <strong className="text-snow">{site.name}</strong>
         <br />
-        Inhaber/in bzw. Firma: {legal('owner', 'Rechtlicher Inhaber / Firmenname')}
+        Inhaber: {legal('owner', 'Inhaber')}
         {l.legalForm && (
           <>
             <br />
@@ -48,12 +48,6 @@ export default function Impressum() {
       {l.representative && <p>Vertretungsberechtigte Person(en): {l.representative}</p>}
       {l.uid && <p>UID: {l.uid}</p>}
       {l.commercialRegister && <p>Handelsregister: {l.commercialRegister}</p>}
-      {!l.uid && (
-        <p className="!text-mute-500 text-sm">
-          Hinweis für die Inbetriebnahme: Ist das Unternehmen im Handelsregister eingetragen oder verfügt es über eine
-          UID, sind diese Angaben in <code>src/config/site.ts</code> zu ergänzen.
-        </p>
-      )}
 
       <h2>Haftungsausschluss</h2>
       <p>

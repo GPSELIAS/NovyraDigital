@@ -3,7 +3,7 @@
  * aus SVG-Vorlagen. Ausführen mit: npm run assets
  */
 import sharp from 'sharp'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
 
@@ -61,7 +61,20 @@ const og = `
   <text x="984" y="540" font-family="${font}" font-size="24" fill="#FAFAFA">novyradigital.ch</text>
 </svg>`
 
+// Helle Variante (weisse Kachel, dunkles N) – wie das Logo im Website-Header, für dunkle Flächen
+const iconLight = (size) => `
+<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#FAFAFA"/>
+  <path d="${N_PATH}" fill="#09090B"/>
+  <circle cx="22.5" cy="23" r="1.6" fill="#4F7CFF"/>
+</svg>`
+
+await mkdir(join(pub, 'email'), { recursive: true })
+
 const out = [
+  // E-Mail-Logos (3-fache Auflösung für scharfe Darstellung auf Retina-Displays)
+  ['email/logo-hell.png', sharp(Buffer.from(iconLight(144))).png()],
+  ['email/logo-dunkel.png', sharp(Buffer.from(icon(144))).png()],
   ['favicon-32.png', sharp(Buffer.from(icon(32))).png()],
   ['apple-touch-icon.png', sharp(Buffer.from(icon(180, 0))).png()],
   ['icon-192.png', sharp(Buffer.from(icon(192, 0))).png()],

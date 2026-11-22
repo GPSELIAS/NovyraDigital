@@ -155,7 +155,7 @@
     @apply mt-3 mb-4 list-disc space-y-1.5 pl-5 marker:text-mute-500;
   }
   .prose-legal a {
-    @apply text-accent-soft underline decoration-accent/40 underline-offset-4 hover:decoration-accent;
+    @apply wrap-anywhere text-accent-soft underline decoration-accent/40 underline-offset-4 hover:decoration-accent;
   }
 }
 

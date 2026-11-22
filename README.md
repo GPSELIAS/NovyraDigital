@@ -1,274 +1,105 @@
-# Novyra Digital – Website
+# Novyra Digital
 
-Produktionsreife Website für **Novyra Digital** (novyradigital.ch): React + TypeScript + Vite + Tailwind CSS + Motion, gehostet auf **Cloudflare Pages** mit einer **Pages Function** für das Kontaktformular (Versand via **Resend**, Spam-Schutz via **Cloudflare Turnstile**).
+Website für [novyradigital.ch](https://novyradigital.ch) mit React, TypeScript und Vite. Netlify liefert die Website aus und betreibt `POST /api/contact`. Cloudflare Turnstile prüft das Formular, Resend versendet die Anfrage und Infomaniak empfängt sie im Postfach `info@novyradigital.ch`.
 
----
+## 1. Lokal entwickeln und prüfen
 
-## Inhalt
-
-1. [Überblick & Struktur](#1-überblick--struktur)
-2. [Lokale Entwicklung](#2-lokale-entwicklung)
-3. [Checkliste vor dem Livegang](#3-checkliste-vor-dem-livegang)
-4. [Resend einrichten (E-Mail-Versand)](#4-resend-einrichten-e-mail-versand)
-5. [Cloudflare Turnstile einrichten](#5-cloudflare-turnstile-einrichten)
-6. [Deployment auf Cloudflare Pages via GitHub](#6-deployment-auf-cloudflare-pages-via-github)
-7. [Domain & DNS (Infomaniak → Cloudflare)](#7-domain--dns-infomaniak--cloudflare)
-8. [HTTPS & www-Weiterleitung](#8-https--www-weiterleitung)
-9. [Rate-Limiting (optional, empfohlen)](#9-rate-limiting-optional-empfohlen)
-10. [Kontaktformular live testen](#10-kontaktformular-live-testen)
-11. [Umgebungsvariablen – Referenz](#11-umgebungsvariablen--referenz)
-12. [Fehlerbehebung](#12-fehlerbehebung)
-
----
-
-## 1. Überblick & Struktur
-
-```
-├─ functions/api/contact.ts   POST /api/contact (Validierung, Turnstile, Rate-Limit, Resend)
-├─ shared/contact.ts          Gemeinsame Validierungsregeln (Frontend + Server)
-├─ src/
-│  ├─ config/site.ts          ⚠️ Firmen-/Rechtsangaben + Turnstile-Site-Key (zentral)
-│  ├─ components/             Layout (Header, Footer), UI (Button, Reveal …), Formular, Visuals
-│  ├─ sections/               Hero, Leistungen, Über uns, Prozess, Lösungen, FAQ, Kontakt
-│  ├─ pages/                  Home, Impressum, Datenschutz, 404
-│  └─ lib/                    SEO-Hook, Scroll-Helfer, Service-Vorauswahl
-├─ public/                    Favicons, OG-Bild, robots.txt, sitemap.xml, _headers (Security/CSP)
-├─ scripts/prerender.mjs      Erzeugt /impressum, /datenschutz, 404 mit eigenen Meta-Tags + Livegang-Warnungen
-├─ scripts/generate-assets.mjs Erzeugt Favicons & OG-Bild neu (npm run assets)
-├─ tests/contact.test.ts      17 Tests für Validierung und Endpoint
-└─ wrangler.toml              Cloudflare-Pages-Konfiguration (nicht-geheime Variablen)
-```
-
-**Funktionen im Überblick**
-
-- Sticky Header mit Glas-Effekt, aktiver Sektionsmarkierung und barrierearmem Mobile-Menü (Fokusführung, Escape, Scroll-Lock)
-- Hero mit animierter Systemvisualisierung, Leistungen (3 Cards mit Service-Vorauswahl im Formular), Über uns / Vorteile, Prozess mit Scroll-Fortschrittslinie, Anwendungsbeispiele (klar als Beispiele gekennzeichnet), FAQ-Accordion, Kontakt
-- Kontaktformular: Frontend- und Server-Validierung (gleiche Regeln), Turnstile, Honeypot, optionales Rate-Limiting, Origin-Prüfung, Grössenlimit, Idempotency-Key, Ladezustand, Doppelklick-Schutz, barrierefreie Fehlermeldungen, Erfolg nur bei tatsächlichem Versand
-- Impressum & Datenschutz (revDSG) mit zentral konfigurierbaren, deutlich markierten **ausstehenden** Pflichtangaben
-- SEO: Title/Description/Canonical/OG pro Route (auch ohne JavaScript dank Prerender), JSON-LD (Organization, ProfessionalService, WebSite), robots.txt, sitemap.xml, echte 404-Statuscodes
-- Performance & Datenschutz: Schrift selbst gehostet (kein Google Fonts), Turnstile wird erst nahe dem Formular geladen, keine Tracking-Cookies → **kein Cookie-Banner nötig**
-- `prefers-reduced-motion` wird überall respektiert
-
----
-
-## 2. Lokale Entwicklung
-
-Voraussetzung: Node.js ≥ 20.
+Benötigt wird Node.js 22 ab Version 22.13. Im Projektordner ausführen:
 
 ```bash
-npm install
-cp .env.example .env.local        # enthält den Turnstile-Testschlüssel fürs Frontend
-cp .dev.vars.example .dev.vars    # Server-Variablen für wrangler (Testschlüssel)
+npm ci
+npm run dev
+npm run build
+npm run typecheck
+npm test
 ```
 
-| Befehl | Zweck |
-|---|---|
-| `npm run dev` | Vite-Dev-Server (http://localhost:5173), schnelles UI-Arbeiten |
-| `npm run dev:full` | Build + `wrangler pages dev` (http://localhost:8788) – inkl. `/api/contact` |
-| `npm run typecheck` | TypeScript-Prüfung (App, Functions, Tests) |
-| `npm test` | Unit- und Endpoint-Tests |
-| `npm run build` | Produktionsbuild nach `dist/` + Prerender + Livegang-Warnungen |
-| `npm run assets` | Favicons und OG-Bild neu erzeugen |
+- `npm run dev` öffnet die Website über Vite unter `http://localhost:5173`.
+- `npm run dev:full` startet die Netlify CLI und stellt Website und Function gemeinsam unter `http://localhost:8888` bereit. Beim ersten Start lädt `npx` die CLI. Für einen lokalen Start ist kein produktiver Deploy nötig. Weil Netlify Dev die produktiven Sicherheitsheader anwendet, sind Änderungen am Frontend dort nach dem Neuladen sichtbar.
+- `npm run build` erzeugt `dist/` mit separaten HTML-Einstiegen für Impressum, Datenschutz und die 404-Seite.
+- `npx --yes netlify-cli build --offline` prüft den Netlify-Build und bündelt die Function lokal. Der Befehl veröffentlicht keinen Deploy.
+- `npm test` prüft unter anderem Eingabevalidierung, Turnstile, Resend und den Netlify-Einstiegspunkt mit simulierten Antworten.
 
-> Hinweis: Mit leerem `RESEND_API_KEY` in `.dev.vars` antwortet `/api/contact` mit einem Fehler – es wird bewusst **keine** Erfolgsmeldung angezeigt. Für einen echten lokalen Versand den echten Key in `.dev.vars` eintragen (Datei ist in `.gitignore`).
+Für lokale Formularversuche `.env.example` nach `.env` kopieren. In PowerShell geht das mit `Copy-Item .env.example .env`. Ohne Schlüssel bleibt der E-Mail-Link verfügbar. Für einen lokalen Browser-Test des Widgets können die [offiziellen öffentlichen Turnstile-Testwerte](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) verwendet werden:
 
----
+```dotenv
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
 
-## 3. Checkliste vor dem Livegang
+Testschlüssel greifen ausschliesslich in lokaler Entwicklung. Für einen echten lokalen Versand sind ein gültiger Resend-Schlüssel, ein verifizierter Absender und ein kontrollierter Testempfänger nötig. Für die normale Entwicklung und die automatisierten Tests bleiben die Versanddaten leer. Beim Wechsel vom alten Wrangler-Setup können veraltete lokale `.env.local`-Einträge die Werte aus `.env` übersteuern. Die alte `.dev.vars` wird für Netlify nicht benötigt.
 
-Der Build gibt Warnungen aus, solange diese Punkte offen sind:
+## 2. Netlify mit GitHub verbinden
 
-- [ ] **`src/config/site.ts` → `legal`**: `owner`, `street`, `city`, `mailProvider` eintragen (optional: `legalForm`, `uid`, `commercialRegister`, `representative`, `phone`). Keine erfundenen Angaben!
-- [ ] **`src/config/site.ts` → `turnstileSiteKey`**: echten Turnstile-Site-Key eintragen (öffentlich, kein Geheimnis)
-- [ ] Resend-Domain `mail.novyradigital.ch` verifiziert (Abschnitt 4)
-- [ ] Secrets in Cloudflare Pages hinterlegt: `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` (Abschnitt 6)
-- [ ] Rechtstexte gegen die tatsächliche Konfiguration geprüft (z. B. ob die Eingangsbestätigung aktiviert ist, ob KV-Rate-Limiting aktiv ist, welcher Mailanbieter genutzt wird). Im Zweifel juristisch prüfen lassen.
-- [ ] Kontaktformular live getestet (Abschnitt 10)
+1. In Netlify **Add new project → Import an existing project → GitHub** wählen und das Repository **NovyraDigital** freigeben und auswählen.
+2. Den gewünschten Produktionsbranch auswählen (im Repository derzeit `main`). Die Einstellungen kommen aus `netlify.toml`. Erwartet werden `npm run build`, `dist`, `netlify/functions`, Node 22 und esbuild.
+3. Den von Netlify angezeigten Hostnamen unter `netlify.app` notieren. Er ist auch der Testhost für das Turnstile-Widget. Der erste Build funktioniert mit deaktiviertem Formular.
+4. Beim Formular registriert die Function selbst den Pfad `/api/contact` und akzeptiert POST. Die rechtlichen Routen werden direkt aus dem Build ausgeliefert. Unbekannte Pfade erhalten die 404-Seite. Die Header für statische Dateien kommen aus `public/_headers`.
+5. Deploy Previews können für UI-Prüfungen ohne Formularschlüssel verwendet werden. Wenn ein Preview echten Versand testen soll, seinen tatsächlichen Hostnamen in einem separaten Turnstile-Widget freigeben und nur die Preview-Variablen mit Testempfänger setzen. Produktionsschlüssel und das produktive Postfach für diesen Kontext freilassen.
 
----
+[Netlify-Dokumentation zu Git-basierten Deploys](https://docs.netlify.com/deploy/create-deploys/)
 
-## 4. Resend einrichten (E-Mail-Versand)
+## 3. `novyradigital.ch` anschliessen und Infomaniak-Postfach erhalten
 
-Ziel: Versand über eine **eigene Subdomain** `mail.novyradigital.ch`, damit die DNS-Einträge des Postfachs `info@novyradigital.ch` (MX/SPF der Hauptdomain) **nicht verändert** werden.
+1. In Netlify unter **Domain management → Production domains** `novyradigital.ch` hinzufügen und als primäre Domain festlegen. Die angezeigte Weiterleitung für `www.novyradigital.ch` prüfen.
+2. Bei der Stelle, die die DNS-Zone verwaltet, die von Netlify unter **Pending DNS verification** konkret angegebenen Web-Einträge für die Hauptdomain und gegebenenfalls `www` setzen. Wenn die DNS-Zone bei Infomaniak liegt, ist das der Infomaniak Manager unter **Domain → DNS-Zone**. Der bestehende DNS-Anbieter kann weiter genutzt werden.
+3. Die bestehenden Einträge für den E-Mail-Empfang und Mailauthentifizierung bei Infomaniak beibehalten. Das betrifft insbesondere MX der Hauptdomain sowie dortige SPF-, DKIM- und DMARC-Einträge. Vor und nach dem Web-DNS-Wechsel den Empfang im Infomaniak-Postfach mit einer kontrollierten Testmail prüfen.
+4. In Netlify DNS-Verifizierung und HTTPS prüfen. Die Hauptdomain und `www` im Browser aufrufen und die Ziel-URL kontrollieren.
 
-1. Konto auf [resend.com](https://resend.com) erstellen.
-2. **Domains → Add Domain** → `mail.novyradigital.ch` eingeben, Region **EU (Ireland, eu-west-1)** wählen.
-3. Resend zeigt die benötigten DNS-Einträge. Typischerweise (Werte **exakt aus dem Resend-Dashboard** übernehmen):
+[Netlify-Vorgaben für externes DNS](https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/)
 
-   | Typ | Name (Host) | Wert | Priorität |
-   |---|---|---|---|
-   | TXT | `resend._domainkey.mail` | `p=MIGfMA0G…` (DKIM-Schlüssel aus Resend) | – |
-   | MX | `send.mail` | `feedback-smtp.eu-west-1.amazonses.com` | 10 |
-   | TXT | `send.mail` | `v=spf1 include:amazonses.com ~all` | – |
+## 4. Kostenloses Cloudflare-Turnstile-Widget anlegen
 
-   Diese Einträge betreffen nur `*.mail.novyradigital.ch` und kollidieren nicht mit dem MX/SPF der Hauptdomain.
-4. Einträge im DNS anlegen (bei Cloudflare: **Proxy-Status „DNS only“ / graue Wolke**), dann in Resend **Verify** klicken. Erst wenn der Status **Verified** ist, kann versendet werden.
-5. **API Keys → Create API Key** → Berechtigung „Sending access“, Domain `mail.novyradigital.ch`. Key sicher notieren – er wird nur einmal angezeigt.
-6. Absender in `wrangler.toml` (bereits gesetzt): `MAIL_FROM = "Novyra Digital <website@mail.novyradigital.ch>"`. Die Adresse `website@…` muss kein echtes Postfach sein – Antworten gehen dank **Reply-To** direkt an die anfragende Person.
+1. Im Cloudflare-Dashboard **Turnstile → Add widget** wählen und dem Widget einen Namen geben, etwa «Novyra Kontaktformular».
+2. `novyradigital.ch` und den tatsächlichen, in Netlify angezeigten Testhost hinzufügen. Hostnamen ohne Schema, Pfad oder Platzhalter eingeben. `www.novyradigital.ch` hinzufügen, falls die Seite dort eigenständig ausgeliefert wird.
+3. Als Modus **Managed** wählen. **Pre-clearance** ausgeschaltet lassen. Das Widget erfordert keine Umstellung des DNS zu Cloudflare.
+4. Den öffentlichen Site Key und den Secret Key unter den unten genannten Variablennamen in Netlify hinterlegen.
+5. Nach dem neuen Build das Widget auf beiden freigegebenen Hostnamen prüfen. Das Formular erneuert ein bereits verwendetes Token. Bei einem Lade- oder Widgetfehler kann die Prüfung neu gestartet werden.
 
-**Optional – DMARC:** Falls noch kein DMARC-Eintrag für die Hauptdomain existiert, empfiehlt sich zunächst ein beobachtender Eintrag: `TXT _dmarc` → `v=DMARC1; p=none; rua=mailto:info@novyradigital.ch`. Dieser gilt für die ganze Domain inkl. Postfach – vorher mit dem Mailanbieter abstimmen.
+[Cloudflare-Anleitung zum Widget](https://developers.cloudflare.com/turnstile/get-started/widget-management/dashboard/)
 
----
+## 5. Resend-Absenderdomain verifizieren
 
-## 5. Cloudflare Turnstile einrichten
+1. In Resend unter **Domains → Add Domain** die Versand-Subdomain `mail.novyradigital.ch` anlegen. Die im Dashboard gewählte Region bestimmt den Versandweg. Resend weist die Speicherung von Nachrichteninhalten und Zustellprotokollen in den USA separat aus.
+2. Die für diese Domain generierten DNS-Einträge aus Resend in die zuständige DNS-Zone übertragen. Für den Versand zeigt das Dashboard DKIM sowie SPF und je nach Konfiguration einen MX-Eintrag für die Return-Path-Subdomain an. Für jeden Eintrag Typ, vollständigen Namen, Wert und bei MX die Priorität genau übernehmen. DNS-Oberflächen können den Zonennamen automatisch anhängen.
+3. Die konkreten Werte sind erst nach Anlegen der Domain in Resend bekannt. Einträge für Resend gehören zu den von Resend angegebenen Namen unterhalb der Versand-Subdomain. Die MX-Einträge und der SPF-Eintrag der Hauptdomain bleiben für Infomaniak reserviert. Die Resend-Funktion für eingehende E-Mails ist für dieses Projekt nicht erforderlich.
+4. In Resend **Verify DNS Records** wählen und auf **Verified** warten. Erst dann den vorgeschlagenen Absender `Novyra Digital <website@mail.novyradigital.ch>` produktiv setzen.
+5. Unter **API Keys → Create API Key** einen Schlüssel mit **Sending access** für die verifizierte Domain erstellen und direkt als geheimen Wert in Netlify hinterlegen. In den Domain-Einstellungen die Tracking-Optionen für Öffnungen und Klicks ausgeschaltet lassen.
 
-1. Cloudflare-Dashboard → **Turnstile → Add widget**.
-2. Name: „Novyra Kontaktformular“, Hostnames: `novyradigital.ch`, `www.novyradigital.ch` (optional zusätzlich `novyra-digital.pages.dev` für Preview-Tests), Widget-Modus: **Managed**.
-3. **Site Key** → in `src/config/site.ts` bei `turnstileSiteKey` eintragen (öffentlich).
-4. **Secret Key** → als Secret `TURNSTILE_SECRET_KEY` in Cloudflare Pages (Abschnitt 6). **Niemals** ins Repository.
+[Resend-Dokumentation zur Domainverifizierung](https://resend.com/docs/dashboard/domains/introduction) · [Datenbearbeitung bei Resend](https://resend.com/security/gdpr)
 
-Testschlüssel für lokale Entwicklung (von Cloudflare dokumentiert): Site Key `1x00000000000000000000AA`, Secret `1x0000000000000000000000000000000AA` (besteht immer).
+## 6. Umgebungsvariablen in Netlify setzen
 
----
+In **Project configuration → Environment variables** jede Variable für den vorgesehenen Deploy-Kontext hinterlegen. Für den produktiven Build die folgenden Werte im Kontext **Production** setzen. Falls der Netlify-Tarif keine getrennten Scopes anbietet, die Zugriffsmöglichkeiten im Projekt prüfen und die Serverwerte weiterhin nur über die dort angegebenen Namen verwenden.
 
-## 6. Deployment auf Cloudflare Pages via GitHub
+| Variable | Scope | Wert |
+| --- | --- | --- |
+| `VITE_TURNSTILE_SITE_KEY` | Builds | Öffentlicher Site Key vom Cloudflare-Widget |
+| `TURNSTILE_SECRET_KEY` | Functions | Privater Secret Key vom selben Widget, als geheim markieren |
+| `RESEND_API_KEY` | Functions | Privater Schlüssel mit Sending access, als geheim markieren |
+| `MAIL_TO` | Functions | `info@novyradigital.ch` |
+| `MAIL_FROM` | Functions | `Novyra Digital <website@mail.novyradigital.ch>` nach Verifizierung, im Dashboard ohne Anführungszeichen |
+| `SEND_CONFIRMATION_EMAIL` | Functions | `true` aktiviert die Bestätigung, `false` oder leer lässt sie aus |
 
-1. **Repository anlegen** (privat empfohlen) und Code pushen:
-   ```bash
-   git add -A
-   git commit -m "Initiale Version der Novyra-Digital-Website"
-   git branch -M main
-   git remote add origin https://github.com/<DEIN-ACCOUNT>/novyra-digital.git
-   git push -u origin main
-   ```
-2. Cloudflare-Dashboard → **Workers & Pages → Create → Pages → Connect to Git** → Repository wählen.
-3. Build-Einstellungen:
-   | Einstellung | Wert |
-   |---|---|
-   | Projektname | `novyra-digital` (muss zu `name` in `wrangler.toml` passen) |
-   | Production branch | `main` |
-   | Framework preset | None / Vite |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   Die Node-Version wird über `.nvmrc` (22) gesetzt.
-4. **Secrets hinterlegen**: Projekt → **Settings → Variables and Secrets → Add** → Typ **Secret**:
-   - `RESEND_API_KEY` = Resend-API-Key
-   - `TURNSTILE_SECRET_KEY` = Turnstile-Secret
+Nach dem Hinterlegen einen neuen Build in Netlify auslösen. Der öffentliche Site Key wird beim Build eingebunden. Die Function liest ihre Variablen zur Laufzeit. `.env.example` enthält keine Zugangsdaten. Lokale `.env`-Dateien gehören nicht ins Repository.
 
-   Alternativ per CLI: `npx wrangler pages secret put RESEND_API_KEY --project-name novyra-digital`
+[Netlify-Variablen für Builds und Functions](https://docs.netlify.com/build/environment-variables/overview/)
 
-   Nicht-geheime Variablen (`MAIL_TO`, `MAIL_FROM`, `SEND_CONFIRMATION_EMAIL`, `ALLOWED_ORIGINS`) stehen in `wrangler.toml` – diese Datei ist für Pages die massgebliche Konfiguration.
-5. **Save and Deploy**. Nach dem ersten Deployment ist die Seite unter `https://novyra-digital.pages.dev` erreichbar. Jeder Push auf `main` deployt automatisch, andere Branches erzeugen Preview-Deployments.
-6. Nach Änderungen an Secrets: **neu deployen** (Deployments → … → Retry deployment), damit sie aktiv werden.
+## 7. Formular nach dem Deployment prüfen
 
----
+1. Die Netlify-Testdomain und nach dem DNS-Wechsel `https://novyradigital.ch/#kontakt` im Browser öffnen. Eine mobile Ansicht prüfen. Über den Footer Impressum und Datenschutz aufrufen und den E-Mail-Link kontrollieren.
+2. Ohne Site Key muss das Formular deaktiviert sein und die Kontaktadresse anzeigen. Mit Schlüssel muss das Widget beim Erreichen des Kontaktbereichs laden. Ein Ladefehler muss einen erneuten Start ermöglichen.
+3. Eine leere oder ungültige Anfrage prüfen. Mit gültigen Feldern und abgeschlossener Sicherheitsprüfung eine synthetische Testanfrage mit eigener E-Mail-Adresse abschicken. Die Website darf nach erfolgreicher Annahme durch Resend «Anfrage gesendet» anzeigen.
+4. Im Postfach bei Infomaniak die Anfrage mit allen angegebenen Feldern prüfen. **Antworten** muss die Adresse aus dem Formular verwenden. In Resend den Zustellstatus der Nachricht kontrollieren. Bei `SEND_CONFIRMATION_EMAIL=true` auch die Bestätigung im Testpostfach prüfen.
+5. In einem separaten Testkontext prüfen, dass ein fehlender oder ungültiger Turnstile-Schlüssel und ein fehlgeschlagener Resend-Versand keine erfolgreiche Übermittlung anzeigen. In den Netlify-Logs stehen technische Fehler ohne Formularinhalte. Die konfigurierte Netlify-Ratenbegrenzung gilt für `/api/contact` je IP und Domain. Ihr Verhalten auf dem realen Projekt lässt sich erst nach einem Deploy prüfen.
 
-## 7. Domain & DNS (Infomaniak → Cloudflare)
+## 8. Offene rechtliche und betriebliche Prüfpunkte
 
-Cloudflare Pages kann die **Hauptdomain** `novyradigital.ch` (ohne www) nur bedienen, wenn die DNS-Zone bei Cloudflare liegt. Daher wird empfohlen, die **Nameserver** bei Infomaniak auf Cloudflare umzustellen. Die Domain bleibt dabei bei Infomaniak registriert, und das Postfach bleibt beim bisherigen Mailanbieter – nur die DNS-Verwaltung zieht zu Cloudflare.
+- **Impressum:** Rechtsform, UID, Handelsregistereintrag, MWST-Registrierung sowie gegebenenfalls abweichende Vertretungsangaben und eine geschäftliche Telefonnummer sind unbestätigt. Klären, welche Angaben im konkreten Fall veröffentlicht werden müssen. Prüfen, ob der tatsächliche Vertriebsablauf als elektronischer Geschäftsverkehr nach Art. 3 Abs. 1 lit. s UWG gilt und dadurch neben der Anbieterkennzeichnung weitere Pflichten auslöst. Der vorhandene Kontaktbereich erfasst Anfragen. [SECO zum Onlinehandel](https://www.seco.admin.ch/de/onlinehandel)
+- **Datenschutz:** Für Netlify, Cloudflare, Resend und Infomaniak die tatsächlichen Bearbeitungsländer, Unterauftragnehmer, Log- und Löschfristen sowie Vertragsbedingungen und Transfergarantien im jeweiligen Konto klären. Die Länder und gegebenenfalls die Garantien vor Inbetriebnahme in der Datenschutzerklärung konkretisieren. Interne Aufbewahrung und Löschung von Anfragen im Infomaniak-Postfach festlegen. [EDÖB zu Auslandbekanntgaben](https://www.edoeb.admin.ch/de/bekanntgabe-von-personendaten-ins-ausland)
+- **Betriebseinstellungen:** Im veröffentlichten Projekt tatsächliche Netzwerkzugriffe und Cookies prüfen, insbesondere Turnstile mit ausgeschalteter Pre-clearance. In Netlify prüfen, dass keine zusätzlichen Analyse-, Besucherzugriffs- oder Skripteinstellungen die Aussagen der Datenschutzerklärung verändern. In Resend die Tracking-Einstellungen und Löschoptionen prüfen.
+- **DSGVO:** Den tatsächlichen EU-/EWR-Bezug prüfen, insbesondere Niederlassung, gezieltes Anbieten von Leistungen an Personen in der EU oder Beobachtung ihres Verhaltens. Bei Anwendbarkeit die zusätzlichen Angaben zu Rechtsgrundlagen, Rechten, Aufsicht und gegebenenfalls Vertretung ergänzen. [EDÖB zur DSGVO und zur Schweiz](https://www.edoeb.admin.ch/de/faq-datenschutz)
 
-### Schritt für Schritt (Variante A – empfohlen)
+Der Abhängigkeits-Audit meldet Befunde in der vorhandenen Vitest-Testumgebung. Das empfohlene Major-Upgrade der Testwerkzeuge steht separat aus.
 
-1. Cloudflare → **Add a domain** → `novyradigital.ch` → Plan **Free**.
-2. Cloudflare importiert die bestehenden DNS-Einträge. **Vor** dem Nameserver-Wechsel prüfen, dass **alle E-Mail-Einträge vollständig übernommen** wurden – mit der Liste bei Infomaniak (Domain → DNS-Zone) abgleichen:
-   - **MX** der Hauptdomain (Postfach-Empfang)
-   - **TXT SPF** der Hauptdomain (z. B. `v=spf1 include:… -all`)
-   - **DKIM** des Mailanbieters (TXT oder CNAME)
-   - **DMARC** (`_dmarc`), falls vorhanden
-   - **Autodiscover/Autoconfig**-CNAMEs, `mail`/`imap`/`smtp`-Einträge, falls vorhanden
-
-   ⚠️ Alle E-Mail-bezogenen Einträge müssen auf **„DNS only“ (graue Wolke)** stehen – niemals proxied.
-3. Falls bei Infomaniak **DNSSEC** aktiv ist: zuerst dort deaktivieren.
-4. Bei Infomaniak → Domain → **Nameserver ändern** → die zwei von Cloudflare angezeigten Nameserver eintragen. Propagation: wenige Minuten bis 24 h. Cloudflare meldet „Active“ per E-Mail.
-5. Cloudflare Pages → Projekt → **Custom domains → Set up a custom domain** → `novyradigital.ch`, danach zusätzlich `www.novyradigital.ch`. Cloudflare legt die Einträge automatisch an.
-6. Optional: DNSSEC danach in Cloudflare aktivieren und den DS-Record bei Infomaniak hinterlegen.
-
-### Benötigte DNS-Einträge – Website
-
-| Typ | Name | Wert | Proxy |
-|---|---|---|---|
-| CNAME | `@` (novyradigital.ch) | `novyra-digital.pages.dev` | Proxied (orange) – wird automatisch angelegt |
-| CNAME | `www` | `novyra-digital.pages.dev` | Proxied (orange) – wird automatisch angelegt |
-
-(Cloudflare löst den CNAME auf der Hauptdomain per „CNAME Flattening“ auf – das ist normal.)
-
-### Benötigte DNS-Einträge – E-Mail-Empfang (info@novyradigital.ch)
-
-Die exakten Werte stammen vom Mailanbieter. **Beispiel für Infomaniak Mail** – bitte mit den Angaben im Infomaniak-Manager abgleichen:
-
-| Typ | Name | Wert (Beispiel) | Proxy |
-|---|---|---|---|
-| MX | `@` | Mailserver des Anbieters (z. B. `mta-gw.infomaniak.ch`) mit der vom Anbieter vorgegebenen Priorität | DNS only |
-| TXT | `@` | SPF des Anbieters (z. B. `v=spf1 include:spf.infomaniak.ch -all`) | DNS only |
-| TXT/CNAME | DKIM-Selector des Anbieters | DKIM-Wert des Anbieters | DNS only |
-| TXT | `_dmarc` | z. B. `v=DMARC1; p=none; rua=mailto:info@novyradigital.ch` (optional) | DNS only |
-
-> Wichtig: **Den SPF-Eintrag der Hauptdomain nicht um Resend erweitern.** Resend versendet über `mail.novyradigital.ch` und hat dort einen eigenen SPF-Eintrag.
-
-### Benötigte DNS-Einträge – E-Mail-Versand (Resend)
-
-Siehe Abschnitt 4 (`resend._domainkey.mail`, `send.mail` MX + TXT) – alle **DNS only**.
-
-### Variante B – DNS bleibt bei Infomaniak (nicht empfohlen)
-
-Ohne Cloudflare-Nameserver kann nur `www.novyradigital.ch` per CNAME auf `novyra-digital.pages.dev` zeigen; die Hauptdomain müsste bei Infomaniak per Weiterleitung auf `www` umgeleitet werden. Dann müssten `site.url`, alle Canonical-URLs (index.html, `scripts/prerender.mjs`, `public/sitemap.xml`, `public/robots.txt`) auf `https://www.novyradigital.ch` umgestellt werden.
-
----
-
-## 8. HTTPS & www-Weiterleitung
-
-- **Zertifikate** stellt Cloudflare Pages automatisch aus (Status in *Custom domains* → „Active“).
-- Cloudflare → Domain → **SSL/TLS → Overview**: Modus **Full (strict)**. Unter **Edge Certificates**: „Always Use HTTPS“ **an**, „Minimum TLS Version“ 1.2.
-- HSTS wird bereits über `public/_headers` gesendet.
-- **www → Hauptdomain**: Cloudflare → Domain → **Rules → Redirect Rules → Create rule → Template „Redirect from WWW to root“** (301, Query-String beibehalten).
-- Empfehlung: **Rocket Loader** deaktiviert lassen (Speed → Optimization), da er Skripte umschreibt.
-
----
-
-## 9. Rate-Limiting (optional, empfohlen)
-
-Turnstile + Honeypot schützen bereits wirksam. Zusätzlich gibt es zwei Möglichkeiten:
-
-**a) WAF-Regel (empfohlen, ohne Code):** Cloudflare → Domain → **Security → WAF → Rate limiting rules → Create**: *URI Path equals `/api/contact`* und *Request Method equals `POST`*, z. B. 3 Anfragen pro 10 Sekunden pro IP → Block für 10 Minuten. (Der Free-Plan enthält eine Rate-Limiting-Regel.)
-
-**b) KV-basiert im Code (5 Anfragen / 10 Min. pro IP):**
-1. Workers & Pages → **KV → Create namespace** (z. B. `novyra-rate-limit`).
-2. In `wrangler.toml` den `[[kv_namespaces]]`-Block einkommentieren und die Namespace-ID eintragen.
-3. Commit + Push. Gespeichert wird nur ein SHA-256-Hash der IP für max. 10 Minuten (in der Datenschutzerklärung bereits beschrieben).
-
----
-
-## 10. Kontaktformular live testen
-
-Erst wenn dieser Test erfolgreich war, ist der E-Mail-Versand bestätigt.
-
-1. Voraussetzungen: Resend-Domain *Verified*, Secrets gesetzt, neu deployt, echter Turnstile-Site-Key in `site.ts`.
-2. `https://novyradigital.ch/#kontakt` öffnen (idealerweise in einem privaten Fenster).
-3. Formular mit einer **eigenen, erreichbaren E-Mail-Adresse** ausfüllen, Dienstleistung wählen, Datenschutz bestätigen, **Anfrage senden**.
-4. Erwartet: Button zeigt „Wird gesendet …“, danach die Meldung *„Vielen Dank für deine Anfrage! …“*.
-5. Prüfen:
-   - Posteingang **info@novyradigital.ch**: E-Mail „Neue Anfrage: … – Name“ mit allen Feldern (auch Spam-Ordner prüfen).
-   - **Antworten** auf diese E-Mail → Empfänger muss die im Formular angegebene Adresse sein (Reply-To).
-   - Resend-Dashboard → **Emails**: Status „Delivered“.
-   - Falls `SEND_CONFIRMATION_EMAIL = "true"`: Eingangsbestätigung bei der eigenen Adresse.
-6. Fehlerfall prüfen (optional): In Pages vorübergehend einen ungültigen `RESEND_API_KEY` setzen und neu deployen → das Formular muss eine **Fehlermeldung** zeigen, keine Erfolgsmeldung. Danach den echten Key wiederherstellen.
-7. Logs bei Problemen: Pages-Projekt → Deployment → **Functions → Real-time Logs** (Einträge mit `[contact]`).
-
----
-
-## 11. Umgebungsvariablen – Referenz
-
-| Variable | Wo | Geheim | Beschreibung |
-|---|---|---|---|
-| `RESEND_API_KEY` | Pages → Secret / `.dev.vars` | **ja** | Resend-API-Key |
-| `TURNSTILE_SECRET_KEY` | Pages → Secret / `.dev.vars` | **ja** | Turnstile-Secret |
-| `MAIL_TO` | `wrangler.toml` | nein | Empfänger (info@novyradigital.ch) |
-| `MAIL_FROM` | `wrangler.toml` | nein | Absender, Domain muss in Resend verifiziert sein |
-| `SEND_CONFIRMATION_EMAIL` | `wrangler.toml` | nein | `"true"` = Eingangsbestätigung an Anfragende (Standard: `"false"`) |
-| `ALLOWED_ORIGINS` | `wrangler.toml` | nein | Erlaubte Origins (gleiche Herkunft inkl. `*.pages.dev`-Previews ist automatisch erlaubt) |
-| `RATE_LIMIT` | `wrangler.toml` (KV-Binding) | – | Optional, siehe Abschnitt 9 |
-| `turnstileSiteKey` | `src/config/site.ts` | nein | Öffentlicher Turnstile-Site-Key |
-| `VITE_TURNSTILE_SITE_KEY` | `.env.local` | nein | Überschreibt den Site Key lokal (Testschlüssel) |
-
----
-
-## 12. Fehlerbehebung
-
-| Symptom | Ursache / Lösung |
-|---|---|
-| Formular: „Das Kontaktformular ist noch nicht vollständig eingerichtet“ | `turnstileSiteKey` in `site.ts` fehlt |
-| „Die Sicherheitsprüfung ist fehlgeschlagen“ | Site Key und Secret gehören nicht zum selben Widget, oder Hostname fehlt im Turnstile-Widget |
-| „Deine Anfrage konnte leider nicht gesendet werden“ | Secrets fehlen (Status 503) oder Resend lehnt ab (502) → Functions-Logs prüfen, Domain verifiziert? `MAIL_FROM`-Domain = verifizierte Domain? |
-| „Unzulässige Herkunft der Anfrage“ (403) | Aufruf von fremder Domain → `ALLOWED_ORIGINS` ergänzen |
-| Turnstile-Widget erscheint nicht | Inhaltsblocker, oder CSP in `public/_headers` verändert |
-| Lokaler Start: „requires compatibility date …“ | `compatibility_date` in `wrangler.toml` auf ein von der installierten Wrangler-Version unterstütztes Datum setzen oder Wrangler aktualisieren |
+Firmendaten werden zentral in `src/config/site.ts` gepflegt. Eine abschliessende juristische Prüfung steht aus.

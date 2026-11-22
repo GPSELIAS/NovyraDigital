@@ -63,17 +63,6 @@ const legalBlock = siteTs.match(/legal:\s*{([\s\S]*?)\n  },/)?.[1] ?? ''
 const optional = ['uid', 'commercialRegister', 'phone', 'legalForm', 'representative']
 const missing = [...legalBlock.matchAll(/^\s+(\w+):\s*null/gm)].map((m) => m[1]).filter((k) => !optional.includes(k))
 if (missing.length) warnings.push(`Rechtliche Pflichtangaben fehlen in src/config/site.ts: ${missing.join(', ')}`)
-// Welcher Turnstile-Site-Key ist tatsächlich im Build gelandet?
-const { readdir } = await import('node:fs/promises')
-const jsFiles = (await readdir(join(dist, 'assets'))).filter((f) => f.endsWith('.js'))
-let bundle = ''
-for (const f of jsFiles) bundle += await readFile(join(dist, 'assets', f), 'utf8')
-const siteKeyInConfig = /turnstileSiteKey:\s*'[^']+'/.test(siteTs)
-if (/[123]x0{20}A{2}/.test(bundle)) {
-  warnings.push('Im Build steckt ein Cloudflare-Turnstile-TESTSCHLÜSSEL (z. B. aus .env.local). Für Produktion den echten Site Key verwenden.')
-} else if (!siteKeyInConfig && !process.env.VITE_TURNSTILE_SITE_KEY) {
-  warnings.push('Kein Turnstile-Site-Key konfiguriert (src/config/site.ts → turnstileSiteKey). Ohne ihn kann das Kontaktformular nicht senden.')
-}
 if (warnings.length) {
   console.warn('\n\x1b[33m⚠  Vor dem Livegang erledigen:\x1b[0m')
   for (const w of warnings) console.warn(`   • ${w}`)

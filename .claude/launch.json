@@ -2,10 +2,25 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pages",
+      "name": "netlify",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["wrangler", "pages", "dev", "dist", "--port", "8788"],
-      "port": 8788
+      "runtimeArgs": [
+        "--yes",
+        "netlify-cli",
+        "dev"
+      ],
+      "port": 8888
+    },
+    {
+      "name": "vite",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
     }
   ]
 }

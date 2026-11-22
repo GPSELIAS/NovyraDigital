@@ -1,4 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { CONTACT_TURNSTILE_ACTION } from '../../../shared/contact'
+import { site } from '../../config/site'
 
 declare global {
   interface Window {
@@ -17,19 +19,28 @@ const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render
 function loadTurnstile(): Promise<void> {
   if (window.turnstile) return Promise.resolve()
   if (window.__novyraTurnstileLoading) return window.__novyraTurnstileLoading
-  window.__novyraTurnstileLoading = new Promise<void>((resolve, reject) => {
+  const promise = new Promise<void>((resolve, reject) => {
     const s = document.createElement('script')
     s.src = SCRIPT_SRC
     s.async = true
     s.defer = true
-    s.onload = () => resolve()
-    s.onerror = () => {
+    const fail = () => {
+      window.clearTimeout(timeout)
+      s.remove()
       window.__novyraTurnstileLoading = undefined
       reject(new Error('Turnstile konnte nicht geladen werden'))
     }
+    const timeout = window.setTimeout(fail, 10_000)
+    s.onload = () => {
+      window.clearTimeout(timeout)
+      if (window.turnstile) resolve()
+      else fail()
+    }
+    s.onerror = fail
     document.head.appendChild(s)
   })
-  return window.__novyraTurnstileLoading
+  window.__novyraTurnstileLoading = promise
+  return promise
 }
 
 export interface TurnstileHandle {
@@ -50,6 +61,7 @@ const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({ siteKe
   const container = useRef<HTMLDivElement>(null)
   const widgetId = useRef<string | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [attempt, setAttempt] = useState(0)
   const cbs = useRef({ onToken, onExpire })
   cbs.current = { onToken, onExpire }
 
@@ -69,20 +81,29 @@ const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({ siteKe
       try {
         await loadTurnstile()
         if (cancelled || !window.turnstile || widgetId.current) return
+        setState('ready')
         widgetId.current = window.turnstile.render(el, {
           sitekey: siteKey,
           theme: 'dark',
           language: 'de',
-          size: 'flexible',
-          callback: (t: string) => cbs.current.onToken(t),
+          size: el.clientWidth < 300 ? 'compact' : 'flexible',
+          action: CONTACT_TURNSTILE_ACTION,
+          retry: 'never',
+          callback: (t: string) => {
+            setState('ready')
+            cbs.current.onToken(t)
+          },
           'expired-callback': () => cbs.current.onExpire(),
-          'timeout-callback': () => cbs.current.onExpire(),
+          'timeout-callback': () => {
+            cbs.current.onExpire()
+            setState('error')
+          },
           'error-callback': () => {
             cbs.current.onExpire()
-            return false
+            setState('error')
+            return true
           },
         })
-        setState('ready')
       } catch {
         if (!cancelled) setState('error')
       }
@@ -107,16 +128,25 @@ const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({ siteKe
         widgetId.current = null
       }
     }
-  }, [siteKey])
+  }, [siteKey, attempt])
 
   return (
     <div>
       <div ref={container} className="min-h-[65px]" />
+      {state === 'loading' && <p role="status" className="text-[13px] text-mute-400">Sicherheitsprüfung wird geladen …</p>}
       {state === 'error' && (
-        <p className="mt-2 text-[13px] text-red-300" role="alert">
-          Die Sicherheitsprüfung konnte nicht geladen werden. Bitte prüfe deine Verbindung oder deaktiviere
-          Inhaltsblocker für diese Seite. Alternativ erreichst du uns unter info@novyradigital.ch.
-        </p>
+        <div className="mt-2 space-y-2 text-[13px] text-red-300">
+          <p role="alert">
+            Die Sicherheitsprüfung konnte nicht abgeschlossen werden. Du erreichst uns auch unter{' '}
+            <a href={`mailto:${site.email}`} className="underline">{site.email}</a>.
+          </p>
+          <button type="button" className="text-snow underline" onClick={() => {
+            setState('loading')
+            setAttempt((previous) => previous + 1)
+          }}>
+            Sicherheitsprüfung erneut starten
+          </button>
+        </div>
       )}
     </div>
   )

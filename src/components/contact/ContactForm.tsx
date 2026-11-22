@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type Rea
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertCircle, CheckCircle2, Loader2, Send } from 'lucide-react'
 import {
+  isTurnstileTestKey,
   LIMITS,
   SERVICES,
   normalizePayload,
@@ -17,7 +18,8 @@ import SmartLink from '../ui/SmartLink'
 import Button from '../ui/Button'
 import Turnstile, { type TurnstileHandle } from './Turnstile'
 
-const SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || site.turnstileSiteKey || undefined
+const configuredKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim()
+const SITE_KEY = configuredKey && (import.meta.env.DEV || !isTurnstileTestKey(configuredKey)) ? configuredKey : undefined
 const SUCCESS_TEXT =
   'Vielen Dank für deine Anfrage! Deine Nachricht wurde erfolgreich übermittelt. Wir melden uns so bald wie möglich bei dir.'
 
@@ -93,7 +95,7 @@ export default function ContactForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (submitting.current) return // Schutz gegen Doppelklicks
+    if (!SITE_KEY || submitting.current) return
 
     const errs = fieldErrors(values)
     setErrors(errs)
@@ -141,14 +143,15 @@ export default function ContactForm() {
         }
         setStatus('error')
         setServerError(
-          (data && !data.ok && data.error) ||
-            'Deine Anfrage konnte leider nicht gesendet werden. Bitte versuche es später erneut oder schreibe uns direkt an info@novyradigital.ch.',
+          res.status === 429
+            ? 'Zu viele Sendeversuche. Bitte warte einen Moment und versuche es erneut.'
+            : (data?.ok === false && data.error) || 'Deine Anfrage konnte nicht gesendet werden. Bitte versuche es später erneut.',
         )
       }
     } catch {
       setStatus('error')
       setServerError(
-        'Die Verbindung zum Server ist fehlgeschlagen. Bitte prüfe deine Internetverbindung und versuche es erneut – oder schreibe uns direkt an info@novyradigital.ch.',
+        'Die Verbindung zum Server ist fehlgeschlagen. Bitte prüfe deine Internetverbindung und versuche es erneut.',
       )
     } finally {
       window.clearTimeout(timeout)
@@ -299,7 +302,7 @@ export default function ContactForm() {
             <SmartLink href="/datenschutz" className="text-snow underline decoration-accent/60 underline-offset-4 hover:decoration-accent">
               Datenschutzerklärung
             </SmartLink>{' '}
-            zur Kenntnis genommen und bin einverstanden, dass meine Angaben zur Bearbeitung meiner Anfrage verwendet werden.
+            zur Kenntnis genommen.
             <span aria-hidden className="text-accent-soft"> *</span>
           </span>
         </label>
@@ -310,8 +313,8 @@ export default function ContactForm() {
         <Turnstile ref={turnstileRef} siteKey={SITE_KEY} onToken={setToken} onExpire={() => setToken('')} />
       ) : (
         <p className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-[13px] text-amber-200" role="note">
-          Das Kontaktformular ist noch nicht vollständig eingerichtet. Bitte schreibe uns in der Zwischenzeit direkt an{' '}
-          <a href="mailto:info@novyradigital.ch" className="underline">info@novyradigital.ch</a>.
+          Das Kontaktformular ist vorübergehend nicht verfügbar. Bitte schreibe uns direkt an{' '}
+          <a href={`mailto:${site.email}`} className="underline">{site.email}</a>.
         </p>
       )}
 
@@ -325,18 +328,23 @@ export default function ContactForm() {
             className="flex gap-3 rounded-xl border border-red-400/25 bg-red-400/[0.07] px-4 py-3 text-[14px] leading-relaxed text-red-200"
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <span>{serverError}</span>
+            <span>
+              {serverError} Du erreichst uns auch unter{' '}
+              <a href={`mailto:${site.email}`} className="underline">{site.email}</a>.
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="flex flex-col-reverse gap-4 pt-1 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[12.5px] leading-relaxed text-mute-500">Geschützt durch Cloudflare Turnstile.</p>
+        {SITE_KEY && (
+          <p className="text-[12.5px] leading-relaxed text-mute-500">Geschützt durch {site.services.spamProtection}.</p>
+        )}
         <button
           type="submit"
-          disabled={status === 'submitting'}
-          aria-disabled={status === 'submitting'}
-          className="group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full bg-accent px-7 text-[15px] font-medium text-white shadow-[0_0_0_1px_rgb(79_124_255/0.5),0_8px_30px_-8px_rgb(79_124_255/0.6),inset_0_1px_0_rgb(255_255_255/0.2)] transition-[background-color,transform] duration-300 hover:bg-accent-strong active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
+          disabled={!SITE_KEY || status === 'submitting'}
+          aria-busy={status === 'submitting'}
+          className="group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full bg-accent px-7 text-[15px] font-medium text-white shadow-[0_0_0_1px_rgb(79_124_255/0.5),0_8px_30px_-8px_rgb(79_124_255/0.6),inset_0_1px_0_rgb(255_255_255/0.2)] transition-[background-color,transform] duration-300 hover:bg-accent-strong active:scale-[0.98] disabled:opacity-60 aria-busy:cursor-wait"
         >
           {status === 'submitting' ? (
             <>

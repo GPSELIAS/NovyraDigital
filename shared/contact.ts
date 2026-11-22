@@ -1,8 +1,14 @@
 /**
  * Gemeinsame Validierungslogik für das Kontaktformular.
- * Wird sowohl im Frontend (React) als auch serverseitig (Pages Function) verwendet,
+ * Wird sowohl im Frontend (React) als auch serverseitig (Netlify Function) verwendet,
  * damit beide Seiten exakt dieselben Regeln anwenden.
  */
+
+export const CONTACT_TURNSTILE_ACTION = 'contact'
+
+export function isTurnstileTestKey(key: string): boolean {
+  return /^[123]x0+[ABF]{2}$/.test(key)
+}
 
 export const SERVICES = [
   { value: 'webdesign', label: 'Webdesign & Entwicklung' },

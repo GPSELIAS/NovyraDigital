@@ -21,7 +21,7 @@ export default function Footer() {
       <div className="container-x py-16 md:py-20">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <SmartLink href="/" aria-label="Novyra Digital – zur Startseite" className="inline-block rounded-md">
+            <SmartLink href="/" aria-label={`${site.name} – zur Startseite`} className="inline-block rounded-md">
               <Logo />
             </SmartLink>
             <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-mute-400">{site.footerClaim}</p>
@@ -64,7 +64,7 @@ export default function Footer() {
 
         <div className="hairline mt-16" />
         <div className="mt-8 flex flex-col gap-3 text-[13px] text-mute-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Novyra Digital. Alle Rechte vorbehalten.</p>
+          <p>© {year} {site.name}. Alle Rechte vorbehalten.</p>
           <p className="flex items-center gap-2">
             <span aria-hidden className="inline-block size-1.5 rounded-full bg-accent animate-pulse-soft" />
             Digitalagentur aus der Schweiz

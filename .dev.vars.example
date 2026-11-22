@@ -1,8 +1,0 @@
-# Kopieren nach `.dev.vars` für `npm run dev:full` (wrangler pages dev).
-# Cloudflare-Turnstile-Testschlüssel: immer erfolgreich.
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
-RESEND_API_KEY=
-MAIL_TO=info@novyradigital.ch
-MAIL_FROM=Novyra Digital <website@mail.novyradigital.ch>
-SEND_CONFIRMATION_EMAIL=false
-ALLOWED_ORIGINS=http://localhost:8788,http://127.0.0.1:8788,http://localhost:5173

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isValidEmail, normalizePayload, validateContact } from '../shared/contact'
-import { onRequestPost, escapeHtml, type Env } from '../functions/api/contact'
+import contact, { config } from '../netlify/functions/contact'
+import { handleContact, escapeHtml, type ContactEnv } from '../server/contact-handler'
 
 const valid = {
   name: 'Anna Beispiel',
@@ -11,7 +12,7 @@ const valid = {
   message: 'Wir möchten unsere Kundenanfragen automatisch erfassen und ins CRM übertragen.',
   privacy: true,
   website: '',
-  turnstileToken: 'XXXX.DUMMY.TOKEN',
+  turnstileToken: 'mock-turnstile-token',
 }
 
 describe('Validierung (shared)', () => {
@@ -49,7 +50,7 @@ describe('Validierung (shared)', () => {
 
 /* ─────────────── Endpoint /api/contact ─────────────── */
 
-const env: Env = {
+const env: ContactEnv = {
   RESEND_API_KEY: 're_test',
   TURNSTILE_SECRET_KEY: 'secret',
   MAIL_TO: 'info@novyradigital.ch',
@@ -58,25 +59,31 @@ const env: Env = {
   ALLOWED_ORIGINS: 'https://novyradigital.ch',
 }
 
-function call(body: unknown, opts: { origin?: string | null; env?: Env; contentType?: string } = {}) {
-  const headers: Record<string, string> = { 'Content-Type': opts.contentType ?? 'application/json', 'CF-Connecting-IP': '203.0.113.7' }
+function makeRequest(body: unknown, opts: { origin?: string | null; contentType?: string; url?: string } = {}) {
+  const headers: Record<string, string> = { 'Content-Type': opts.contentType ?? 'application/json' }
   if (opts.origin !== null) headers.Origin = opts.origin ?? 'https://novyradigital.ch'
-  const request = new Request('https://novyradigital.ch/api/contact', {
+  return new Request(opts.url ?? 'https://novyradigital.ch/api/contact', {
     method: 'POST',
     headers,
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (onRequestPost as any)({ request, env: opts.env ?? env }) as Promise<Response>
+}
+
+function call(body: unknown, opts: Parameters<typeof makeRequest>[1] & { env?: ContactEnv } = {}) {
+  return handleContact(makeRequest(body, opts), opts.env ?? env)
 }
 
 type FetchCall = [string, RequestInit]
 let fetchMock: ReturnType<typeof vi.fn>
 
-function mockServices({ turnstile = true, resend = 200 }: { turnstile?: boolean; resend?: number } = {}) {
+function mockServices({ turnstile = true, resend = 200, hostname = 'novyradigital.ch', action = 'contact', confirmation = 200 } = {}) {
+  let mailCount = 0
   fetchMock = vi.fn(async (url: string) => {
-    if (url.includes('turnstile')) return new Response(JSON.stringify({ success: turnstile }), { status: 200 })
-    if (url.includes('resend')) return new Response(JSON.stringify(resend === 200 ? { id: 'abc' } : { message: 'fail' }), { status: resend })
+    if (url.includes('turnstile')) return Response.json({ success: turnstile, hostname, action })
+    if (url.includes('resend')) {
+      const status = mailCount++ === 0 ? resend : confirmation
+      return Response.json(status === 200 ? { id: 'abc' } : { message: 'fail' }, { status })
+    }
     throw new Error('unerwartete URL ' + url)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -87,6 +94,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   vi.restoreAllMocks()
 })
 
@@ -96,7 +104,9 @@ describe('POST /api/contact', () => {
     const res = await call(valid)
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
-    const resendCall = (fetchMock.mock.calls as FetchCall[]).find(([u]) => u.includes('resend'))!
+    const [[verifyUrl, verifyOptions], resendCall] = fetchMock.mock.calls as FetchCall[]
+    expect(verifyUrl).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify')
+    expect(Object.fromEntries(verifyOptions.body as URLSearchParams)).toEqual({ secret: env.TURNSTILE_SECRET_KEY, response: valid.turnstileToken })
     const mail = JSON.parse(resendCall[1].body as string)
     expect(mail.to).toEqual(['info@novyradigital.ch'])
     expect(mail.reply_to).toBe('anna@beispiel.ch')
@@ -137,10 +147,11 @@ describe('POST /api/contact', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('Honeypot: neutrale Antwort, kein Versand', async () => {
+  it('Honeypot: kein Versand und keine Erfolgsmeldung', async () => {
     mockServices()
     const res = await call({ ...valid, website: 'http://spam.example' })
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(400)
+    expect((await res.json()).ok).toBe(false)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -178,17 +189,43 @@ describe('POST /api/contact', () => {
     expect((fetchMock.mock.calls as FetchCall[]).filter(([u]) => u.includes('resend'))).toHaveLength(1)
   })
 
-  it('Rate-Limiting über KV greift nach 5 Anfragen', async () => {
+  it.each([
+    { hostname: 'andere-domain.example' },
+    { action: 'andere-aktion' },
+  ])('versendet bei abweichenden Siteverify-Daten keine E-Mail (%o)', async (challenge) => {
+    mockServices(challenge)
+    expect((await call(valid)).status).toBe(400)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('erlaubt den offiziellen Testschlüssel nur in Netlify Dev auf Loopback', async () => {
+    const testEnv = { ...env, TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA' }
+    mockServices({ hostname: 'example.com', action: '' })
+    expect((await call(valid, { env: { ...testEnv, allowLocalTurnstileTestKey: true } })).status).toBe(503)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    const local = { origin: 'http://localhost:8888', url: 'http://localhost:8888/api/contact' }
+    expect((await call(valid, { ...local, env: testEnv })).status).toBe(503)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect((await call(valid, { ...local, env: { ...testEnv, allowLocalTurnstileTestKey: true } })).status).toBe(200)
+  })
+
+  it('belässt den Erfolg der Anfrage bei fehlgeschlagener Eingangsbestätigung', async () => {
+    mockServices({ confirmation: 500 })
+    const res = await call(valid, { env: { ...env, SEND_CONFIRMATION_EMAIL: 'true' } })
+    expect(await res.json()).toEqual({ ok: true })
+  })
+
+  it('liest die Servervariablen im Netlify-Einstiegspunkt und akzeptiert nur POST', async () => {
     mockServices()
-    const store = new Map<string, string>()
-    const kv = {
-      get: async (k: string) => store.get(k) ?? null,
-      put: async (k: string, v: string) => void store.set(k, v),
-    } as unknown as KVNamespace
-    const e = { ...env, RATE_LIMIT: kv }
-    for (let i = 0; i < 5; i++) expect((await call(valid, { env: e })).status).toBe(200)
-    const res = await call(valid, { env: e })
-    expect(res.status).toBe(429)
-    expect(res.headers.get('Retry-After')).toBe('600')
+    for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value)
+    expect(config.path).toBe('/api/contact')
+
+    const get = await contact(new Request('https://novyradigital.ch/api/contact'))
+    expect(get.status).toBe(405)
+    expect(get.headers.get('Allow')).toBe('POST')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    expect((await contact(makeRequest(valid))).status).toBe(200)
   })
 })

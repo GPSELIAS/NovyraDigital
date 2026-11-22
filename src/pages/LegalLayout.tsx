@@ -33,7 +33,7 @@ export default function LegalLayout({ eyebrow, title, children }: { eyebrow: str
             <span aria-hidden className="inline-block h-px w-6 bg-accent" />
             {eyebrow}
           </p>
-          <h1 className="display mt-5 text-5xl sm:text-6xl">{title}</h1>
+          <h1 className="display mt-5 break-words text-4xl sm:text-6xl">{title}</h1>
           <p className="mt-5 text-sm text-mute-500">Stand: {site.legalUpdated}</p>
 
           {missing.length > 0 && (

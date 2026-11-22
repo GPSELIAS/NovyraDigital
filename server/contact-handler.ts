@@ -3,12 +3,15 @@
  * (Turnstile + Honeypot) und versendet die Nachricht via Resend. Wird von der Netlify Function aufgerufen.
  */
 import {
+  CONTACT_TURNSTILE_ACTION,
+  isTurnstileTestKey,
   normalizePayload,
   validateContact,
   serviceLabel,
   type ContactPayload,
   type ContactResponse,
 } from '../shared/contact'
+import { site } from '../src/config/site'
 
 export interface ContactEnv {
   RESEND_API_KEY?: string
@@ -17,32 +20,34 @@ export interface ContactEnv {
   MAIL_FROM?: string
   SEND_CONFIRMATION_EMAIL?: string
   ALLOWED_ORIGINS?: string
+  allowLocalTurnstileTestKey?: boolean
 }
 
 const MAX_BODY_BYTES = 20_000
 
-const json = (body: ContactResponse, status = 200, extra: HeadersInit = {}) =>
+const json = (body: ContactResponse, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
-      ...extra,
     },
   })
 
-const GENERIC_ERROR = 'Deine Anfrage konnte leider nicht gesendet werden. Bitte versuche es später erneut oder schreibe uns direkt an info@novyradigital.ch.'
+const GENERIC_ERROR = 'Deine Anfrage konnte leider nicht gesendet werden. Bitte versuche es später erneut.'
+const CONFIRMATION_SUBJECT = `Deine Anfrage bei ${site.name}`
+const SITE_HOST = new URL(site.url).hostname
 
-export async function handleContact(request: Request, env: ContactEnv, ip = ''): Promise<Response> {
+export async function handleContact(request: Request, env: ContactEnv): Promise<Response> {
   try {
-    // 1) Herkunft prüfen (Schutz vor Cross-Site-Missbrauch)
-    if (!isAllowedOrigin(request, env)) {
+    const origin = request.headers.get('Origin')
+    if (!origin || !isAllowedOrigin(request, env, origin)) {
       return json({ ok: false, error: 'Unzulässige Herkunft der Anfrage.' }, 403)
     }
 
-    // 2) Content-Type & Grösse
-    if (!(request.headers.get('Content-Type') ?? '').includes('application/json')) {
+    const contentType = request.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase()
+    if (contentType !== 'application/json') {
       return json({ ok: false, error: 'Ungültiges Anfrageformat.' }, 415)
     }
     const raw = await request.text()
@@ -58,33 +63,32 @@ export async function handleContact(request: Request, env: ContactEnv, ip = ''):
 
     const data = normalizePayload(parsed)
 
-    // 3) Honeypot: Bots erhalten eine neutrale Antwort, es wird nichts versendet.
     if (data.website.trim() !== '') {
-      return json({ ok: true })
+      return json({ ok: false, error: GENERIC_ERROR }, 400)
     }
 
-    // 4) Serverseitige Validierung
     const fields = validateContact(data)
     if (Object.keys(fields).length > 0) {
       return json({ ok: false, error: 'Bitte überprüfe die markierten Felder.', fields }, 422)
     }
 
-    // 5) Konfiguration prüfen – ohne Schlüssel kein Versand und keine Erfolgsmeldung
-    if (!env.RESEND_API_KEY || !env.TURNSTILE_SECRET_KEY || !env.MAIL_FROM || !env.MAIL_TO) {
-      console.error('[contact] Fehlende Konfiguration: RESEND_API_KEY, TURNSTILE_SECRET_KEY, MAIL_FROM oder MAIL_TO')
-      return json({ ok: false, error: GENERIC_ERROR }, 503)
+    const hostname = new URL(origin).hostname
+    const secret = env.TURNSTILE_SECRET_KEY
+    const testSecret = secret ? isTurnstileTestKey(secret) : false
+    const isLocalTest = env.allowLocalTurnstileTestKey === true && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(hostname)
+    if (!env.RESEND_API_KEY || !secret || !env.MAIL_FROM || !env.MAIL_TO || (testSecret && !isLocalTest)) {
+      console.error('[contact] Fehlende oder ungültige Versandkonfiguration')
+      return json({ ok: false, error: 'Das Kontaktformular ist vorübergehend nicht verfügbar.' }, 503)
     }
 
-    // 7) Turnstile prüfen
     if (!data.turnstileToken || data.turnstileToken.length > 2048) {
-      return json({ ok: false, error: 'Die Sicherheitsprüfung fehlt. Bitte lade die Seite neu und versuche es erneut.' }, 400)
+      return json({ ok: false, error: 'Die Sicherheitsprüfung fehlt. Bitte führe die Prüfung erneut durch.' }, 400)
     }
-    const human = await verifyTurnstile(env.TURNSTILE_SECRET_KEY, data.turnstileToken, ip)
+    const human = await verifyTurnstile(secret, data.turnstileToken, hostname, testSecret)
     if (!human) {
       return json({ ok: false, error: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.' }, 400)
     }
 
-    // 8) Versand an Novyra Digital
     const idempotencyKey = await sha256(`${data.email}|${data.message}|${data.turnstileToken}`)
     const sent = await sendMail(env.RESEND_API_KEY, {
       from: env.MAIL_FROM,
@@ -99,49 +103,49 @@ export async function handleContact(request: Request, env: ContactEnv, ip = ''):
       return json({ ok: false, error: GENERIC_ERROR }, 502)
     }
 
-    // 9) Optionale Eingangsbestätigung – erst nach erfolgreichem Versand
+    // Eine fehlgeschlagene Bestätigung ändert den Erfolg der eigentlichen Anfrage nicht.
     if (env.SEND_CONFIRMATION_EMAIL === 'true') {
       await sendMail(env.RESEND_API_KEY, {
         from: env.MAIL_FROM,
         to: [data.email],
         reply_to: env.MAIL_TO,
-        subject: 'Deine Anfrage bei Novyra Digital',
+        subject: CONFIRMATION_SUBJECT,
         html: confirmationHtml(data),
         text: confirmationText(data),
       }, `${idempotencyKey}-confirm`)
-      // Fehler bei der Bestätigung ändern nichts am Erfolg der eigentlichen Anfrage.
     }
 
     return json({ ok: true })
-  } catch (err) {
-    console.error('[contact] Unerwarteter Fehler', err instanceof Error ? err.message : err)
+  } catch {
+    console.error('[contact] Unerwarteter Fehler')
     return json({ ok: false, error: GENERIC_ERROR }, 500)
   }
 }
 
 /* ───────────────────────── Hilfsfunktionen ───────────────────────── */
 
-function isAllowedOrigin(request: Request, env: ContactEnv): boolean {
-  const origin = request.headers.get('Origin')
-  if (!origin) return false
+function isAllowedOrigin(request: Request, env: ContactEnv, origin: string): boolean {
   const self = new URL(request.url).origin
   if (origin === self) return true // gleiche Herkunft (inkl. Netlify-Deploy-Previews)
   const allowed = (env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   return allowed.includes(origin)
 }
 
-async function verifyTurnstile(secret: string, token: string, ip: string): Promise<boolean> {
-  const body = new FormData()
-  body.append('secret', secret)
-  body.append('response', token)
-  if (ip) body.append('remoteip', ip)
+async function verifyTurnstile(secret: string, token: string, hostname: string, localTest: boolean): Promise<boolean> {
+  const body = new URLSearchParams({ secret, response: token })
   try {
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body })
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body,
+      signal: AbortSignal.timeout(5_000),
+    })
     if (!res.ok) return false
-    const out = (await res.json()) as { success?: boolean }
-    return out.success === true
-  } catch (err) {
-    console.error('[contact] Turnstile-Prüfung fehlgeschlagen', err instanceof Error ? err.message : err)
+    const out = (await res.json()) as { success?: boolean; hostname?: string; action?: string }
+    return out.success === true && (localTest
+      ? out.hostname === 'example.com'
+      : out.hostname === hostname && out.action === CONTACT_TURNSTILE_ACTION)
+  } catch {
+    console.error('[contact] Turnstile-Prüfung fehlgeschlagen')
     return false
   }
 }
@@ -165,15 +169,15 @@ async function sendMail(apiKey: string, mail: MailInput, idempotencyKey: string)
         'Idempotency-Key': idempotencyKey.slice(0, 256),
       },
       body: JSON.stringify(mail),
+      signal: AbortSignal.timeout(6_000),
     })
     if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error(`[contact] Resend-Fehler ${res.status}: ${detail.slice(0, 500)}`)
+      console.error(`[contact] Resend-Fehler ${res.status}`)
       return false
     }
     return true
-  } catch (err) {
-    console.error('[contact] Resend nicht erreichbar', err instanceof Error ? err.message : err)
+  } catch {
+    console.error('[contact] Resend nicht erreichbar')
     return false
   }
 }
@@ -209,7 +213,7 @@ function shell(title: string, inner: string): string {
 <body style="margin:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#18181b">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e4e4e7">
-<tr><td style="background:#09090b;padding:22px 28px;color:#fafafa;font-weight:600;letter-spacing:.18em;font-size:13px">NOVYRA DIGITAL</td></tr>
+<tr><td style="background:#09090b;padding:22px 28px;color:#fafafa;font-weight:600;letter-spacing:.18em;font-size:13px">${escapeHtml(site.name.toUpperCase())}</td></tr>
 <tr><td style="padding:28px">${inner}</td></tr>
 </table></td></tr></table></body></html>`
 }
@@ -219,24 +223,24 @@ function internalHtml(d: ContactPayload): string {
     .map(
       ([k, v]) =>
         `<tr><td style="padding:8px 12px 8px 0;color:#71717a;font-size:14px;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:8px 0;font-size:14px">${
-          k === 'E-Mail' ? `<a href="mailto:${escapeHtml(v)}" style="color:#4f7cff">${escapeHtml(v)}</a>` : escapeHtml(v)
+          k === 'E-Mail' ? `<a href="mailto:${encodeURIComponent(v).replace('%40', '@')}" style="color:#4f7cff">${escapeHtml(v)}</a>` : escapeHtml(v)
         }</td></tr>`,
     )
     .join('')
   return shell(
     'Neue Anfrage',
-    `<h1 style="margin:0 0 6px;font-size:20px">Neue Anfrage über novyradigital.ch</h1>
+    `<h1 style="margin:0 0 6px;font-size:20px">Neue Anfrage über ${SITE_HOST}</h1>
 <p style="margin:0 0 20px;color:#71717a;font-size:14px">Antworten auf diese E-Mail gehen direkt an die anfragende Person.</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e4e4e7;border-bottom:1px solid #e4e4e7;margin-bottom:20px">${table}</table>
 <h2 style="margin:0 0 8px;font-size:15px">Nachricht</h2>
 <div style="font-size:14px;line-height:1.6;background:#fafafa;border:1px solid #e4e4e7;border-radius:10px;padding:16px">${nl2br(d.message)}</div>
-<p style="margin:20px 0 0;color:#a1a1aa;font-size:12px">Datenschutzerklärung zur Kenntnis genommen: Ja · Gesendet am ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })}</p>`,
+<p style="margin:20px 0 0;color:#a1a1aa;font-size:12px">Datenschutzerklärung zur Kenntnis genommen: Ja</p>`,
   )
 }
 
 function internalText(d: ContactPayload): string {
   return [
-    'Neue Anfrage über novyradigital.ch',
+    `Neue Anfrage über ${SITE_HOST}`,
     '',
     ...rows(d).map(([k, v]) => `${k}: ${v}`),
     '',
@@ -250,12 +254,12 @@ function internalText(d: ContactPayload): string {
 function confirmationHtml(d: ContactPayload): string {
   const firstName = d.name.split(' ')[0] ?? d.name
   return shell(
-    'Deine Anfrage bei Novyra Digital',
+    CONFIRMATION_SUBJECT,
     `<h1 style="margin:0 0 14px;font-size:20px">Hallo ${escapeHtml(firstName)}</h1>
 <p style="font-size:15px;line-height:1.6;margin:0 0 14px">Vielen Dank für deine Anfrage zum Thema <strong>${escapeHtml(serviceLabel(d.service))}</strong>. Wir haben deine Nachricht erhalten und melden uns so bald wie möglich bei dir.</p>
 <p style="font-size:15px;line-height:1.6;margin:0 0 20px">Falls du noch etwas ergänzen möchtest, antworte einfach auf diese E-Mail.</p>
-<p style="font-size:15px;margin:0">Freundliche Grüsse<br>Novyra Digital</p>
-<p style="margin:24px 0 0;color:#a1a1aa;font-size:12px">Diese E-Mail wurde automatisch versendet, weil über novyradigital.ch eine Anfrage mit dieser Adresse eingereicht wurde.</p>`,
+<p style="font-size:15px;margin:0">Freundliche Grüsse<br>${escapeHtml(site.name)}</p>
+<p style="margin:24px 0 0;color:#a1a1aa;font-size:12px">Diese E-Mail wurde automatisch versendet, weil über ${SITE_HOST} eine Anfrage mit dieser Adresse eingereicht wurde.</p>`,
   )
 }
 
@@ -268,6 +272,6 @@ Vielen Dank für deine Anfrage zum Thema «${serviceLabel(d.service)}». Wir hab
 Falls du noch etwas ergänzen möchtest, antworte einfach auf diese E-Mail.
 
 Freundliche Grüsse
-Novyra Digital`
+${site.name}`
 }
 

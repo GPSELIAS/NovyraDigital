@@ -5,7 +5,7 @@ import { Menu, X } from 'lucide-react'
 import Logo from '../ui/Logo'
 import SmartLink from '../ui/SmartLink'
 import Button from '../ui/Button'
-import { nav } from '../../config/site'
+import { nav, site } from '../../config/site'
 
 const SECTION_IDS = ['leistungen', 'ueber-uns', 'faq', 'kontakt']
 
@@ -100,7 +100,7 @@ export default function Header() {
         }`}
       >
         <div className="container-x flex h-16 items-center justify-between gap-6 md:h-[72px]">
-          <SmartLink href="/" aria-label="Novyra Digital – zur Startseite" className="rounded-md">
+          <SmartLink href="/" aria-label={`${site.name} – zur Startseite`} className="rounded-md">
             <Logo />
           </SmartLink>
 
@@ -190,7 +190,7 @@ export default function Header() {
                   Projekt anfragen
                 </Button>
                 <p className="mt-6 text-center text-sm text-mute-500">
-                  <a href="mailto:info@novyradigital.ch" className="hover:text-snow">info@novyradigital.ch</a>
+                  <a href={`mailto:${site.email}`} className="hover:text-snow">{site.email}</a>
                 </p>
               </div>
             </nav>

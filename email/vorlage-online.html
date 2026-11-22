@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  Novyra Digital – E-Mail-Vorlage
+  ───────────────────────────────
+  • Platzhalter in [ECKIGEN KLAMMERN] ersetzen.
+  • Die Logos werden von https://novyradigital.ch/email/… geladen – sie erscheinen
+    erst, wenn die Website mit dem Ordner public/email/ veröffentlicht ist.
+  • Aufbau mit Tabellen und Inline-Styles, damit die Vorlage in Outlook, Gmail,
+    Apple Mail und Infomaniak Mail gleich aussieht.
+-->
+<html lang="de-CH" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Novyra Digital</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;-webkit-text-size-adjust:100%;">
+  <!-- Vorschautext (im Posteingang neben dem Betreff sichtbar) -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">[KURZER VORSCHAUTEXT]</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;">
+
+          <!-- Kopfzeile mit Logo -->
+          <tr>
+            <td style="background-color:#09090b;padding:22px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:12px;">
+                    <a href="https://novyradigital.ch" style="text-decoration:none;">
+                      <img src="https://novyradigital.ch/email/logo-hell.png" width="32" height="32" alt="Novyra Digital" style="display:block;border:0;width:32px;height:32px;border-radius:8px;">
+                    </a>
+                  </td>
+                  <td style="vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;letter-spacing:2.6px;color:#fafafa;">
+                    NOVYRA <span style="color:#a1a1aa;">DIGITAL</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- feine Akzentlinie -->
+          <tr><td style="height:2px;line-height:2px;font-size:0;background-color:#4f7cff;">&nbsp;</td></tr>
+
+          <!-- Inhalt -->
+          <tr>
+            <td style="padding:36px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#18181b;">
+              <h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-0.3px;color:#09090b;">[BETREFF / TITEL]</h1>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#3f3f46;">Grüezi [ANREDE NAME]</p>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#3f3f46;">[Hier steht dein Text. Absätze einfach als weitere Zeilen mit demselben Stil einfügen.]</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#3f3f46;">[Weiterer Absatz.]</p>
+
+              <!-- Optionaler Button – entfernen, falls nicht benötigt -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
+                <tr>
+                  <td style="background-color:#4f7cff;border-radius:999px;">
+                    <a href="[LINK]" style="display:inline-block;padding:12px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">[BUTTON-TEXT]&nbsp;&rarr;</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:15px;line-height:1.65;color:#3f3f46;">Freundliche Grüsse</p>
+            </td>
+          </tr>
+
+          <!-- Signatur -->
+          <tr>
+            <td style="padding:20px 32px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e4e4e7;">
+                <tr>
+                  <td style="padding-top:22px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:top;padding-right:16px;">
+                          <a href="https://novyradigital.ch" style="text-decoration:none;">
+                            <img src="https://novyradigital.ch/email/logo-dunkel.png" width="48" height="48" alt="Novyra Digital" style="display:block;border:0;width:48px;height:48px;border-radius:12px;">
+                          </a>
+                        </td>
+                        <td style="vertical-align:top;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+                          <p style="margin:0;font-size:15px;line-height:1.4;font-weight:600;color:#09090b;">[VORNAME NACHNAME]</p>
+                          <p style="margin:2px 0 10px;font-size:13px;line-height:1.4;color:#71717a;">[FUNKTION] · Novyra Digital</p>
+                          <p style="margin:0;font-size:13px;line-height:1.7;color:#3f3f46;">
+                            <a href="mailto:info@novyradigital.ch" style="color:#3f3f46;text-decoration:none;">info@novyradigital.ch</a><br>
+                            <a href="https://novyradigital.ch" style="color:#4f7cff;text-decoration:none;font-weight:600;">novyradigital.ch</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin:18px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#a1a1aa;">
+                      Digitale Lösungen. Einfach. Intelligent. Wirkungsvoll.<br>
+                      Webdesign · KI &amp; Automatisierung · Individuelle Software
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Fusszeile ausserhalb der Karte -->
+        <p style="margin:18px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:#a1a1aa;text-align:center;">
+          Novyra Digital · Digitalagentur aus der Schweiz
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
