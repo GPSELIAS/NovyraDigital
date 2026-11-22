@@ -138,10 +138,11 @@ describe('POST /api/contact', () => {
     expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)
   })
 
-  it('lehnt abweichenden Hostname ab', async () => {
+  it('lehnt abweichenden Hostname ab und nennt den Grund im Diagnosecode', async () => {
     mockServices({ hostname: 'fremde-seite.example' })
     const res = await call(valid)
     expect(res.status).toBe(400)
+    expect(((await res.json()) as any).code).toBe('TS-hostname:fremde-seite.example')
     expect((fetchMock.mock.calls as FetchCall[]).some(([u]) => u.includes('resend'))).toBe(false)
   })
 

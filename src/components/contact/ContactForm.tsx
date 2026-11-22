@@ -145,7 +145,8 @@ export default function ContactForm() {
         setServerError(
           res.status === 429
             ? 'Zu viele Sendeversuche. Bitte warte einen Moment und versuche es erneut.'
-            : (data?.ok === false && data.error) || 'Deine Anfrage konnte nicht gesendet werden. Bitte versuche es später erneut.',
+            : ((data?.ok === false && data.error) || 'Deine Anfrage konnte nicht gesendet werden. Bitte versuche es später erneut.') +
+              (data?.ok === false && data.code ? ` (Code: ${data.code})` : ''),
         )
       }
     } catch {

@@ -85,11 +85,11 @@ export async function handleContact(request: Request, env: ContactEnv): Promise<
       return json({ ok: false, error: 'Die Sicherheitsprüfung fehlt. Bitte führe die Prüfung erneut durch.' }, 400)
     }
     const check = await verifyTurnstile(secret, data.turnstileToken, hostname, testSecret)
-    if (check === 'config-error') {
-      return json({ ok: false, error: 'Das Kontaktformular ist vorübergehend nicht verfügbar.' }, 503)
+    if (check.result === 'config-error') {
+      return json({ ok: false, error: 'Das Kontaktformular ist vorübergehend nicht verfügbar.', code: `TS-${check.reason}` }, 503)
     }
-    if (check !== 'ok') {
-      return json({ ok: false, error: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.' }, 400)
+    if (check.result !== 'ok') {
+      return json({ ok: false, error: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuche es erneut.', code: `TS-${check.reason}` }, 400)
     }
 
     const idempotencyKey = await sha256(`${data.email}|${data.message}|${data.turnstileToken}`)
@@ -137,7 +137,14 @@ function isAllowedOrigin(request: Request, env: ContactEnv, origin: string): boo
 /** Cloudflare-Fehlercodes, die auf eine falsche Server-Konfiguration hinweisen (nicht auf einen Bot). */
 const TURNSTILE_CONFIG_ERRORS = ['missing-input-secret', 'invalid-input-secret']
 
-type TurnstileResult = 'ok' | 'failed' | 'config-error'
+interface TurnstileResult {
+  result: 'ok' | 'failed' | 'config-error'
+  /** Nicht vertraulicher Grund (Cloudflare-Fehlercode bzw. Prüfschritt) für Logs und Diagnosecode */
+  reason: string
+}
+
+/** Begrenzt Fremdwerte auf harmlose Zeichen, bevor sie in Logs/Antworten landen. */
+const safe = (v: string | undefined) => (v ?? '–').replace(/[^a-z0-9._-]/gi, '').slice(0, 60) || '–'
 
 async function verifyTurnstile(secret: string, token: string, hostname: string, localTest: boolean): Promise<TurnstileResult> {
   const body = new URLSearchParams({ secret, response: token })
@@ -149,31 +156,31 @@ async function verifyTurnstile(secret: string, token: string, hostname: string, 
     })
     if (!res.ok) {
       console.error(`[contact] Turnstile-Antwort HTTP ${res.status}`)
-      return 'failed'
+      return { result: 'failed', reason: `http-${res.status}` }
     }
     const out = (await res.json()) as { success?: boolean; hostname?: string; action?: string; 'error-codes'?: string[] }
-    const codes = out['error-codes'] ?? []
+    const codes = (out['error-codes'] ?? []).map((c) => safe(c))
     if (codes.some((c) => TURNSTILE_CONFIG_ERRORS.includes(c))) {
       console.error(`[contact] Turnstile-Konfigurationsfehler: ${codes.join(', ')} – TURNSTILE_SECRET_KEY prüfen (gehört er zum selben Widget wie der Site Key?)`)
-      return 'config-error'
+      return { result: 'config-error', reason: codes.join('+') }
     }
     if (out.success !== true) {
       console.error(`[contact] Turnstile abgelehnt: ${codes.join(', ') || 'ohne Fehlercode'}`)
-      return 'failed'
+      return { result: 'failed', reason: codes.join('+') || 'rejected' }
     }
     const expectedHost = localTest ? 'example.com' : hostname
     if (out.hostname !== expectedHost) {
-      console.error(`[contact] Turnstile-Hostname passt nicht: erwartet «${expectedHost}», erhalten «${out.hostname ?? '–'}»`)
-      return 'failed'
+      console.error(`[contact] Turnstile-Hostname passt nicht: erwartet «${expectedHost}», erhalten «${safe(out.hostname)}»`)
+      return { result: 'failed', reason: `hostname:${safe(out.hostname)}` }
     }
     if (!localTest && out.action !== CONTACT_TURNSTILE_ACTION) {
-      console.error(`[contact] Turnstile-Action passt nicht: erwartet «${CONTACT_TURNSTILE_ACTION}», erhalten «${out.action ?? '–'}»`)
-      return 'failed'
+      console.error(`[contact] Turnstile-Action passt nicht: erwartet «${CONTACT_TURNSTILE_ACTION}», erhalten «${safe(out.action)}»`)
+      return { result: 'failed', reason: `action:${safe(out.action)}` }
     }
-    return 'ok'
+    return { result: 'ok', reason: 'ok' }
   } catch (err) {
     console.error('[contact] Turnstile-Prüfung fehlgeschlagen', err instanceof Error ? err.message : err)
-    return 'failed'
+    return { result: 'failed', reason: 'unreachable' }
   }
 }
 

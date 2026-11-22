@@ -108,4 +108,4 @@ export function serviceLabel(value: string): string {
 /** Antwortformat des Endpoints */
 export type ContactResponse =
   | { ok: true }
-  | { ok: false; error: string; fields?: ContactErrors }
+  | { ok: false; error: string; fields?: ContactErrors; /** Kurzer, nicht vertraulicher Diagnosecode */ code?: string }
