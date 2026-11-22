@@ -9,6 +9,8 @@ import type { ServiceValue } from '../../shared/contact'
 interface Service {
   id: ServiceValue
   index: string
+  /** Typische Ausgangslage in den Worten von Kundinnen und Kunden */
+  problem: string
   category: string
   title: string
   text: string
@@ -21,6 +23,7 @@ const services: Service[] = [
   {
     id: 'webdesign',
     index: '01',
+    problem: '«Unsere Website ist in die Jahre gekommen.»',
     category: 'Webdesign & Entwicklung',
     title: 'Websites, die mehr können als gut aussehen.',
     text: 'Wir entwickeln individuelle Websites, die durch modernes Design, schnelle Ladezeiten und eine überzeugende Nutzererfahrung begeistern. Optimiert für sämtliche Geräte und darauf ausgerichtet, aus Besuchern neue Kunden zu gewinnen.',
@@ -31,6 +34,7 @@ const services: Service[] = [
   {
     id: 'automation',
     index: '02',
+    problem: '«Ich tippe jeden Tag dasselbe ab.»',
     category: 'KI & Automatisierung',
     title: 'Weniger Routine. Mehr Zeit fürs Wesentliche.',
     text: 'Wir automatisieren wiederkehrende Geschäftsprozesse und verbinden bestehende Tools zu intelligenten Workflows. So entstehen effizientere Abläufe und mehr Freiraum für die wichtigen Aufgaben.',
@@ -41,6 +45,7 @@ const services: Service[] = [
   {
     id: 'software',
     index: '03',
+    problem: '«Keine Software passt zu unserem Ablauf.»',
     category: 'Individuelle Software',
     title: 'Software, die sich deinem Unternehmen anpasst.',
     text: 'Wir entwickeln digitale Anwendungen und interne Tools, die genau dort ansetzen, wo Standardlösungen an ihre Grenzen stossen.',
@@ -65,8 +70,8 @@ export default function Services() {
         <SectionHeading
           id="leistungen-title"
           eyebrow="Leistungen"
-          title="Was wir für dich möglich machen."
-          description="Von der ersten Idee bis zur fertigen Lösung: Wir entwickeln digitale Produkte und automatisierte Prozesse, die zu deinem Unternehmen passen."
+          title="Kennst du das? Dann kann ich helfen."
+          description="Von der ersten Idee bis zur fertigen Lösung: Ich entwickle digitale Lösungen und automatisierte Abläufe, die zu deinem Unternehmen passen."
         />
 
         <div className="mt-16 grid gap-5 lg:grid-cols-3">
@@ -84,7 +89,8 @@ export default function Services() {
                   <span className="font-mono text-xs text-mute-500">{s.index}</span>
                 </div>
 
-                <p className="mt-8 text-[13px] font-medium text-accent-soft">{s.category}</p>
+                <p className="mt-8 text-[17px] font-semibold leading-snug text-warm">{s.problem}</p>
+                <p className="mt-6 text-[13px] font-medium text-accent-soft">{s.category}</p>
                 <h3 id={`svc-${s.id}`} className="mt-2 text-[1.45rem] font-semibold leading-tight tracking-[-0.02em] text-snow">
                   {s.title}
                 </h3>

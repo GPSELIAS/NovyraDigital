@@ -6,23 +6,23 @@ import Reveal from '../components/ui/Reveal'
 const steps = [
   {
     n: '01',
-    title: 'Kennenlernen',
-    text: 'Wir sprechen über dein Unternehmen, deine Ziele und die Herausforderungen, die du lösen möchtest.',
+    title: 'Wir lernen uns kennen',
+    text: 'Ein unverbindliches Gespräch über dein Unternehmen, deine Ziele und das, was dich gerade bremst.',
   },
   {
     n: '02',
-    title: 'Konzept',
-    text: 'Wir entwickeln einen passenden Lösungsansatz und definieren gemeinsam die nächsten Schritte.',
+    title: 'Konzept & Offerte',
+    text: 'Du bekommst einen klaren Lösungsansatz und eine transparente Offerte, die du verstehst.',
   },
   {
     n: '03',
-    title: 'Entwicklung',
-    text: 'Wir setzen die vereinbarte Lösung technisch um und legen Wert auf Design, Funktionalität und Qualität.',
+    title: 'Umsetzung',
+    text: 'Ich setze die Lösung um und zeige dir regelmässig, wie es vorangeht. Dein Feedback fliesst direkt ein.',
   },
   {
     n: '04',
-    title: 'Launch & Weiterentwicklung',
-    text: 'Nach erfolgreicher Prüfung geht dein Projekt live. Auf Wunsch begleiten wir dich auch bei der Weiterentwicklung.',
+    title: 'Launch & Begleitung',
+    text: 'Nach erfolgreicher Prüfung geht dein Projekt live. Auf Wunsch bleibe ich auch danach dein Ansprechpartner.',
   },
 ]
 
@@ -35,15 +35,15 @@ export default function Process() {
   return (
     <section id="prozess" aria-labelledby="prozess-title" className="relative py-24 md:py-36">
       <div className="container-x">
-        <SectionHeading id="prozess-title" eyebrow="So arbeiten wir" title="Ein klarer Prozess. Ein überzeugendes Ergebnis." />
+        <SectionHeading id="prozess-title" eyebrow="Ablauf" title="Vom ersten Gespräch bis zum Launch." />
 
         <ol ref={ref} className="relative mt-16 grid gap-10 md:mt-20 lg:grid-cols-4 lg:gap-6">
           {/* Fortschrittslinie: horizontal (Desktop) bzw. vertikal (Mobil) */}
           <div aria-hidden className="absolute left-0 right-0 top-[22px] hidden h-px bg-white/[0.08] lg:block">
-            <motion.div style={{ scaleX }} className="h-full origin-left bg-gradient-to-r from-accent to-accent-soft" />
+            <motion.div style={{ scaleX }} className="h-full origin-left bg-gradient-to-r from-warm to-accent" />
           </div>
           <div aria-hidden className="absolute bottom-2 left-[22px] top-2 w-px bg-white/[0.08] lg:hidden">
-            <motion.div style={{ scaleY }} className="h-full w-full origin-top bg-gradient-to-b from-accent to-accent-soft" />
+            <motion.div style={{ scaleY }} className="h-full w-full origin-top bg-gradient-to-b from-warm to-accent" />
           </div>
 
           {steps.map((s, i) => (

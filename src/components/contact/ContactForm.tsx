@@ -21,7 +21,7 @@ import Turnstile, { type TurnstileHandle } from './Turnstile'
 const configuredKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim()
 const SITE_KEY = configuredKey && (import.meta.env.DEV || !isTurnstileTestKey(configuredKey)) ? configuredKey : undefined
 const SUCCESS_TEXT =
-  'Vielen Dank für deine Anfrage! Deine Nachricht wurde erfolgreich übermittelt. Wir melden uns so bald wie möglich bei dir.'
+  'Vielen Dank für deine Anfrage! Deine Nachricht wurde erfolgreich übermittelt. Ich melde mich so bald wie möglich bei dir.'
 
 interface Values {
   name: string
@@ -275,7 +275,7 @@ export default function ContactForm() {
           value={values.message} onChange={update('message')} onBlur={blur('message')}
           aria-invalid={!!err('message')} aria-describedby={err('message') ? 'message-error' : 'message-hint'}
           className="field min-h-[150px] resize-y leading-relaxed"
-          placeholder="Erzähl uns kurz von deinem Vorhaben, deinen Zielen und dem gewünschten Zeitrahmen."
+          placeholder="Erzähl mir kurz von deinem Vorhaben, deinen Zielen und dem gewünschten Zeitrahmen."
         />
       </Field>
 
@@ -314,7 +314,7 @@ export default function ContactForm() {
         <Turnstile ref={turnstileRef} siteKey={SITE_KEY} onToken={setToken} onExpire={() => setToken('')} />
       ) : (
         <p className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-[13px] text-amber-200" role="note">
-          Das Kontaktformular ist vorübergehend nicht verfügbar. Bitte schreibe uns direkt an{' '}
+          Das Kontaktformular ist vorübergehend nicht verfügbar. Bitte schreib mir direkt an{' '}
           <a href={`mailto:${site.email}`} className="underline">{site.email}</a>.
         </p>
       )}
@@ -330,7 +330,7 @@ export default function ContactForm() {
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
-              {serverError} Du erreichst uns auch unter{' '}
+              {serverError} Du erreichst mich auch unter{' '}
               <a href={`mailto:${site.email}`} className="underline">{site.email}</a>.
             </span>
           </motion.div>

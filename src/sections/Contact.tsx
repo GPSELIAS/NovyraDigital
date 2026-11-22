@@ -6,7 +6,7 @@ import { site } from '../config/site'
 
 const notes = [
   { icon: MessageCircle, text: 'Unverbindliches Erstgespräch zu deinem Anliegen' },
-  { icon: Clock, text: 'Wir melden uns so bald wie möglich bei dir' },
+  { icon: Clock, text: 'Ich melde mich persönlich und so bald wie möglich bei dir' },
   { icon: ShieldCheck, text: 'Deine Angaben werden nur zur Bearbeitung der Anfrage verwendet' },
 ]
 
@@ -14,7 +14,7 @@ export default function Contact() {
   return (
     <section id="kontakt" aria-labelledby="kontakt-title" className="relative overflow-hidden border-t border-white/[0.06] py-24 md:py-36">
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 top-20 h-[520px] w-[520px] rounded-full bg-[radial-gradient(closest-side,rgb(79_124_255/0.16),transparent)] blur-2xl" />
+        <div className="absolute -left-40 top-20 h-[520px] w-[520px] rounded-full bg-[radial-gradient(closest-side,rgb(245_185_113/0.14),transparent)] blur-2xl" />
         <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_50%_60%_at_20%_30%,black,transparent)]" />
       </div>
 
@@ -23,8 +23,8 @@ export default function Contact() {
           <SectionHeading
             id="kontakt-title"
             eyebrow="Kontakt"
-            title="Bereit für den nächsten digitalen Schritt?"
-            description="Du hast eine Idee, möchtest deine Website modernisieren oder wiederkehrende Prozesse automatisieren? Erzähl uns von deinem Vorhaben. Wir freuen uns darauf, von dir zu hören."
+            title="Lass uns einfach mal reden."
+            description="Du hast eine Idee, möchtest deine Website modernisieren oder wiederkehrende Prozesse automatisieren? Erzähl mir von deinem Vorhaben. Kein Verkaufsgespräch, sondern ein ehrlicher Austausch darüber, was dir weiterhilft."
           />
 
           <Reveal delay={0.1}>

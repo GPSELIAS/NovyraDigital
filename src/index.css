@@ -18,6 +18,11 @@
   --color-accent: #4f7cff;
   --color-accent-strong: #3d6af5;
   --color-accent-soft: #8aa8ff;
+  /* Warme Akzente (Richtung «Dunkel & nahbar») */
+  --color-warm: #f5b971;
+  --color-sand: #f4f1ec;
+  --color-sand-ink: #1c1a17;
+  --color-sand-mute: #5a554d;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 

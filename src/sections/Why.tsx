@@ -1,68 +1,48 @@
-import { Fingerprint, MessagesSquare, Gauge, Route } from 'lucide-react'
-import SectionHeading from '../components/ui/SectionHeading'
+import { HeartHandshake, MessagesSquare, ShieldCheck, MapPin } from 'lucide-react'
 import Reveal from '../components/ui/Reveal'
 
-const benefits = [
-  {
-    icon: Fingerprint,
-    title: 'Individuell statt von der Stange',
-    text: 'Jedes Unternehmen ist anders. Deshalb entwickeln wir Lösungen, die zu deinen Anforderungen passen.',
-  },
-  {
-    icon: MessagesSquare,
-    title: 'Klare Kommunikation',
-    text: 'Wir erklären technische Möglichkeiten verständlich und begleiten dich transparent durch dein Projekt.',
-  },
-  {
-    icon: Gauge,
-    title: 'Effizienz im Fokus',
-    text: 'Unser Ziel sind digitale Lösungen, die Abläufe vereinfachen und langfristig einen Mehrwert schaffen.',
-  },
-  {
-    icon: Route,
-    title: 'Von der Idee bis zur Umsetzung',
-    text: 'Wir unterstützen dich von der ersten Planung über die Entwicklung bis zur Veröffentlichung.',
-  },
+const values = [
+  { icon: HeartHandshake, title: 'Persönlich', text: 'Eine Ansprechperson vom ersten Gespräch bis zum Launch.' },
+  { icon: MessagesSquare, title: 'Verständlich', text: 'Klare Worte statt Fachbegriffe und eine Offerte, die du verstehst.' },
+  { icon: ShieldCheck, title: 'Ehrlich', text: 'Ich rate auch ab, wenn etwas für dich keinen Sinn ergibt.' },
+  { icon: MapPin, title: 'Lokal', text: 'Aus Biel, schweizweit und vollständig digital erreichbar.' },
 ]
 
-/** «Über uns» – Haltung und Arbeitsweise, ohne erfundene Team- oder Firmenangaben. */
+/** «Über mich» – Haltung und Arbeitsweise, basierend auf Mission und Positionierung (keine erfundenen Angaben). */
 export default function Why() {
   return (
-    <section id="ueber-uns" aria-labelledby="ueber-uns-title" className="relative overflow-hidden bg-snow py-24 text-ink-950 md:py-36">
+    <section id="ueber-mich" aria-labelledby="ueber-mich-title" className="relative overflow-hidden bg-sand py-24 text-sand-ink md:py-32">
       <div aria-hidden className="bg-grid-light pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
-      <div className="container-x relative">
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
-          <div className="lg:col-span-7">
-            <SectionHeading
-              id="ueber-uns-title"
-              tone="light"
-              eyebrow="Warum Novyra Digital"
-              title="Technologie ist nur dann wertvoll, wenn sie etwas verbessert."
-            />
-          </div>
-          <Reveal delay={0.1} className="lg:col-span-5 lg:pt-14">
-            <p className="text-[17px] leading-relaxed text-ink-700">
-              Novyra Digital ist eine Schweizer Digitalagentur für Webentwicklung, KI-Automationen und individuelle
-              Softwarelösungen.
-            </p>
-            <p className="mt-4 text-[17px] leading-relaxed text-mute-500">
-              Unsere Mission: professionelle Digitalisierung für kleine und mittelständische Unternehmen zugänglich
-              machen – unkompliziert, effizient und individuell. Wir verbinden modernes Design mit technischer Kompetenz
-              und persönlicher Zusammenarbeit.
-            </p>
-          </Reveal>
-        </div>
+      <div className="container-x relative grid gap-14 lg:grid-cols-12 lg:gap-16">
+        <Reveal className="lg:col-span-7">
+          <p className="eyebrow !text-sand-mute">
+            <span aria-hidden className="inline-block h-px w-6 bg-accent" />
+            Über mich
+          </p>
+          <h2 id="ueber-mich-title" className="sr-only">
+            Über mich
+          </h2>
+          <blockquote className="mt-6 text-[1.9rem] font-semibold leading-[1.2] tracking-[-0.025em] text-balance sm:text-[2.5rem]">
+            «Ich will, dass meine Kundinnen und Kunden verstehen, was ich baue, und dass es ihnen im Alltag wirklich
+            etwas bringt.»
+          </blockquote>
+          <p className="mt-7 max-w-2xl text-[17px] leading-relaxed text-sand-mute">
+            Mit Novyra Digital möchte ich professionelle Digitalisierung für kleine und mittelständische Unternehmen
+            zugänglich machen: unkompliziert, effizient und individuell. Dabei verbinde ich modernes Design mit
+            technischer Kompetenz und persönlicher Zusammenarbeit.
+          </p>
+          <p className="mt-6 font-semibold">Elias Golam, Gründer von Novyra Digital</p>
+        </Reveal>
 
-        <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-ink-950/[0.08] bg-ink-950/[0.08] sm:grid-cols-2 lg:grid-cols-4">
-          {benefits.map((b, i) => (
-            <Reveal key={b.title} delay={i * 0.07} className="h-full">
-              <article className="group relative flex h-full flex-col bg-white p-7 transition-colors duration-500 hover:bg-[#fcfcfd] sm:p-8">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-ink-950 text-snow transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:bg-accent">
-                  <b.icon className="size-5" aria-hidden />
+        <div className="grid content-center gap-3.5 sm:grid-cols-2 lg:col-span-5">
+          {values.map((v, i) => (
+            <Reveal key={v.title} delay={i * 0.07} className="h-full">
+              <article className="group h-full rounded-2xl bg-white p-6 shadow-[0_1px_0_rgb(28_26_23/0.06)] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5">
+                <span className="flex size-10 items-center justify-center rounded-xl bg-sand-ink text-sand transition-colors duration-500 group-hover:bg-accent">
+                  <v.icon className="size-[18px]" aria-hidden />
                 </span>
-                <h3 className="mt-10 text-lg font-semibold tracking-[-0.015em] text-ink-950">{b.title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-mute-500">{b.text}</p>
-                <span aria-hidden className="absolute bottom-0 left-0 h-0.5 w-0 bg-accent transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+                <h3 className="mt-5 text-[17px] font-semibold">{v.title}</h3>
+                <p className="mt-1.5 text-[14.5px] leading-relaxed text-sand-mute">{v.text}</p>
               </article>
             </Reveal>
           ))}

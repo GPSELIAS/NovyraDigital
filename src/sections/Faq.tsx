@@ -8,7 +8,7 @@ import SmartLink from '../components/ui/SmartLink'
 export const faqs = [
   {
     q: 'Was kostet eine professionelle Website?',
-    a: 'Die Kosten hängen von Umfang, Design und gewünschten Funktionen ab. Nach einem ersten Gespräch erstellen wir eine individuelle Offerte, die zu deinem Projekt passt.',
+    a: 'Die Kosten hängen von Umfang, Design und gewünschten Funktionen ab. Nach einem ersten Gespräch erstelle ich dir eine individuelle Offerte, die zu deinem Projekt passt.',
   },
   {
     q: 'Wie lange dauert die Entwicklung?',
@@ -16,11 +16,11 @@ export const faqs = [
   },
   {
     q: 'Könnt ihr bestehende Geschäftsprozesse automatisieren?',
-    a: 'Ja. Wir analysieren bestehende Abläufe und prüfen, welche Prozesse sich durch Automatisierung und KI sinnvoll vereinfachen lassen.',
+    a: 'Ja. Ich analysiere bestehende Abläufe und prüfe, welche Prozesse sich durch Automatisierung und KI sinnvoll vereinfachen lassen.',
   },
   {
     q: 'Bietet ihr auch Unterstützung nach dem Launch?',
-    a: 'Auf Wunsch unterstützen wir dich auch nach der Veröffentlichung bei Anpassungen, Wartung und Weiterentwicklung.',
+    a: 'Auf Wunsch unterstütze ich dich auch nach der Veröffentlichung bei Anpassungen, Wartung und Weiterentwicklung.',
   },
   {
     q: 'Arbeitet ihr mit Unternehmen in der ganzen Schweiz?',
@@ -28,7 +28,7 @@ export const faqs = [
   },
   {
     q: 'Ist das erste Gespräch unverbindlich?',
-    a: 'Ja. In einem ersten Gespräch klären wir dein Anliegen und besprechen mögliche Lösungsansätze – unverbindlich.',
+    a: 'Ja. In einem ersten Gespräch klären wir gemeinsam dein Anliegen und besprechen mögliche Lösungsansätze – unverbindlich.',
   },
 ]
 
@@ -84,12 +84,12 @@ export default function Faq() {
       <div className="container-x grid gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-32">
-            <SectionHeading id="faq-title" eyebrow="FAQ" title="Häufige Fragen." description="Antworten auf die Fragen, die uns am häufigsten gestellt werden." />
+            <SectionHeading id="faq-title" eyebrow="FAQ" title="Häufige Fragen." description="Antworten auf die Fragen, die mir am häufigsten gestellt werden." />
             <Reveal delay={0.15}>
               <p className="mt-8 text-[15px] text-mute-400">
                 Deine Frage ist nicht dabei?{' '}
                 <SmartLink href="/#kontakt" className="text-snow underline decoration-accent/60 underline-offset-4 transition-colors hover:decoration-accent">
-                  Schreib uns
+                  Schreib mir
                 </SmartLink>
                 .
               </p>

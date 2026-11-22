@@ -43,7 +43,7 @@ export default function Solutions() {
           <SectionHeading
             id="loesungen-title"
             eyebrow="Anwendungsbeispiele"
-            title="Lösungen, die wir realisieren."
+            title="Lösungen, die ich realisiere."
             description="Drei typische Szenarien, wie digitale Lösungen im Unternehmensalltag aussehen können. Die Darstellungen sind illustrative Beispiele und keine Kundenprojekte."
           />
         </div>

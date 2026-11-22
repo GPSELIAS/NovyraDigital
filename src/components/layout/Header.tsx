@@ -7,7 +7,7 @@ import SmartLink from '../ui/SmartLink'
 import Button from '../ui/Button'
 import { nav, site } from '../../config/site'
 
-const SECTION_IDS = ['leistungen', 'ueber-uns', 'faq', 'kontakt']
+const SECTION_IDS = ['leistungen', 'ueber-mich', 'faq', 'kontakt']
 
 /** Ermittelt die aktuell sichtbare Sektion für die aktive Navigationsmarkierung. */
 function useActiveSection(enabled: boolean) {
@@ -132,7 +132,7 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <span className="hidden sm:block">
               <Button href="/#kontakt" size="md">
-                Projekt anfragen
+                Gespräch vereinbaren
               </Button>
             </span>
             <button
@@ -187,7 +187,7 @@ export default function Header() {
               </ul>
               <div className="mt-auto pt-10">
                 <Button href="/#kontakt" size="lg" arrow className="w-full" onClick={() => setOpen(false)}>
-                  Projekt anfragen
+                  Gespräch vereinbaren
                 </Button>
                 <p className="mt-6 text-center text-sm text-mute-500">
                   <a href={`mailto:${site.email}`} className="hover:text-snow">{site.email}</a>

@@ -53,7 +53,7 @@ export type LegalKey = keyof typeof site.legal
 export const nav = [
   { label: 'Startseite', href: '/' },
   { label: 'Leistungen', href: '/#leistungen' },
-  { label: 'Über uns', href: '/#ueber-uns' },
+  { label: 'Über mich', href: '/#ueber-mich' },
   { label: 'FAQ', href: '/#faq' },
   { label: 'Kontakt', href: '/#kontakt' },
 ] as const
