@@ -59,7 +59,8 @@ export default function Impressum() {
       </p>
       <p>
         Die auf dieser Website dargestellten Anwendungsbeispiele und Visualisierungen dienen der Veranschaulichung
-        unserer Leistungen. Es handelt sich nicht um Kundenprojekte oder reale Daten.
+        unserer Leistungen. Es handelt sich nicht um Kundenprojekte oder reale Daten. Ausgenommen sind ausdrücklich als
+        «Referenz» gekennzeichnete Projekte; deren Darstellung ist stilisiert und kein Abbild der jeweiligen Website.
       </p>
 
       <h2>Haftung für Links</h2>
