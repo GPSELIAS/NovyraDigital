@@ -12,8 +12,12 @@ export function isTurnstileTestKey(key: string): boolean {
 
 export const SERVICES = [
   { value: 'webdesign', label: 'Webdesign & Entwicklung' },
+  { value: 'website-start', label: 'Website Start' },
+  { value: 'website-plus', label: 'Website Plus' },
   { value: 'automation', label: 'KI & Automatisierung' },
+  { value: 'ki-bot', label: 'KI-Bot' },
   { value: 'software', label: 'Individuelle Software' },
+  { value: 'webapp', label: 'Webapp' },
   { value: 'sonstiges', label: 'Sonstige Anfrage' },
 ] as const
 

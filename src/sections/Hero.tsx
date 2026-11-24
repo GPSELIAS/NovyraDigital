@@ -58,8 +58,8 @@ export default function Hero() {
             <Button href="/#kontakt" size="lg" arrow>
               Erzähl mir von deinem Projekt
             </Button>
-            <Button href="/#leistungen" size="lg" variant="secondary">
-              Leistungen ansehen
+            <Button href="/#angebote" size="lg" variant="secondary">
+              Angebote ansehen
             </Button>
           </motion.div>
 

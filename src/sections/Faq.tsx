@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Plus } from 'lucide-react'
 import SectionHeading from '../components/ui/SectionHeading'
@@ -8,7 +8,15 @@ import SmartLink from '../components/ui/SmartLink'
 export const faqs = [
   {
     q: 'Was kostet eine professionelle Website?',
-    a: 'Die Kosten hängen von Umfang, Design und gewünschten Funktionen ab. Nach einem ersten Gespräch erstelle ich dir eine individuelle Offerte, die zu deinem Projekt passt.',
+    a: (
+      <>
+        Unter{' '}
+        <SmartLink href="/#angebote" className="text-snow underline decoration-accent/60 underline-offset-4 hover:decoration-accent">
+          Angebote
+        </SmartLink>{' '}
+        findest du die Preise und den Umfang von Website Start und Website Plus. Für grössere Vorhaben erstelle ich dir nach einem ersten Gespräch eine individuelle Offerte.
+      </>
+    ),
   },
   {
     q: 'Wie lange dauert die Entwicklung?',
@@ -32,7 +40,7 @@ export const faqs = [
   },
 ]
 
-function Item({ q, a, open, onToggle }: { q: string; a: string; open: boolean; onToggle: () => void }) {
+function Item({ q, a, open, onToggle }: { q: string; a: ReactNode; open: boolean; onToggle: () => void }) {
   const id = useId()
   return (
     <div className="border-b border-white/[0.07]">

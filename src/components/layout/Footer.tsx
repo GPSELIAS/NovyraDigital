@@ -5,6 +5,7 @@ import { site } from '../../config/site'
 
 const footerNav = [
   { label: 'Startseite', href: '/' },
+  { label: 'Angebote', href: '/#angebote' },
   { label: 'Leistungen', href: '/#leistungen' },
   { label: 'Über mich', href: '/#ueber-mich' },
   { label: 'Kontakt', href: '/#kontakt' },

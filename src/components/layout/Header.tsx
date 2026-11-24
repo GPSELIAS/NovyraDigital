@@ -7,7 +7,7 @@ import SmartLink from '../ui/SmartLink'
 import Button from '../ui/Button'
 import { nav, site } from '../../config/site'
 
-const SECTION_IDS = ['leistungen', 'ueber-mich', 'faq', 'kontakt']
+const SECTION_IDS = ['angebote', 'leistungen', 'ueber-mich', 'faq', 'kontakt']
 
 /** Ermittelt die aktuell sichtbare Sektion für die aktive Navigationsmarkierung. */
 function useActiveSection(enabled: boolean) {
